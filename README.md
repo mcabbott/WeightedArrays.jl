@@ -5,12 +5,14 @@ I'm in the process of separated this out & upgrading to Julia 0.7.
 
 What's working:
 * sobol, wrand, etc.
-* unique (but test errors from versions...) 
-* PCA, plots
+* unique (but test errors from wrong GroupSlices version)
+* PCA (but with warnings from MultivariateStats)
+* plots
 
 Still to do:
 * slicing
 * symm
 * broadcasting
+* saving
 
 [![Build Status](https://travis-ci.org/mcabbott/WeightedArrays.jl.svg?branch=master)](https://travis-ci.org/mcabbott/WeightedArrays.jl)

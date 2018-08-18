@@ -22,9 +22,10 @@ end
 Returns the column of `x` with the largest weight, as the same type.
 If `x::Weighted{Matrix}` then weights need not be given.
 """
-function maxcol(x::Weighted{T1,T2,N,C,L}, λ=x.weights) where {T1<:AbsMat,T2,N,C,L}
+function maxcol(x::Weighted{<:AbsMat}, λ=x.weights)
+# function maxcol(x::Weighted{T1,T2,N,C,L}, λ=x.weights) where {T1<:AbsMat,T2,N,C,L}
     (m,i) = findmax(λ)
-    Weighted(x.array[:, i:i], [x.weights[i]], unnormalise(x.opt))::Weighted{T1,T2,false,C,L} ## otherwise type-unstable
+    Weighted(x.array[:, i:i], [x.weights[i]], unnormalise(x.opt))#::Weighted{T1,T2,false,C,L} ## otherwise type-unstable
 end
 maxcol(x::AbsMat, λ::AbsVec) = begin (m,i) = findmax(λ); x[:, i:i] end
 
@@ -69,10 +70,10 @@ using GroupSlices
 Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digitsits,
 and after applying function `f` if given. There is also non-mutating `unique`.
 """
-unique!(x::WeightedMatrix, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
-unique!(x::WeightedMatrix, f::Function; kw...) = unique!(x, f(x); kw...)
+Base.unique!(x::WeightedMatrix, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
+Base.unique!(x::WeightedMatrix, f::Function; kw...) = unique!(x, f(x); kw...)
 
-@doc @doc(unique!)
+# @doc @doc(unique!)
 Base.unique(x::WeightedMatrix, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
 Base.unique(x::WeightedMatrix, f::Function; kw...) = unique(x, f(x); kw...)
 

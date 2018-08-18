@@ -1,6 +1,7 @@
 
-export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted
-export array, weights, lastlength, normalise, normalise!, wcopy, wcopy!
+export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
+export array, weights, lastlength, normalise, normalise!, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!
+export AbsVec, AbsMat, AbsArray
 
 using Parameters
 
@@ -11,17 +12,23 @@ using Parameters
     hi::Float64 = 1.0
     aname::String = "θ"
     wname::String = "p(θ)"
+    # stat::Bool = false
+    # rows::Int = 0
     like::Bool = false
 end
 
-mutable struct Weighted{T1,T2,N,C,L}
+## I tried added boolean flags to the type. I'm not entirely sure this is a good idea re type stability, e.g. yexp() doesn't infer.
+## ClampedWeighted etc used for clamp! and normalise! methods below... and maxcol() also needed to be changed.
+# mutable struct Weighted{T1,T2,N,C,L}
+mutable struct Weighted{T1,T2}
     array::T1
     weights::T2
     opt::WeightOpt
 
     function Weighted(array::T1, weights::T2, opt::WeightOpt) where {T1<:AbstractArray,T2<:AbstractVector}
         size(array,ndims(array)) == length(weights) || error("length of weights much match size of last dimension of array")
-        new{T1, T2, opt.norm, opt.clamp, opt.like}(array, weights, opt)
+        # new{T1, T2, opt.norm, opt.clamp, opt.like}(array, weights, opt)
+        new{T1, T2}(array, weights, opt)
     end
 end
 
@@ -33,11 +40,11 @@ const MaybeWeightedArray = Union{AbstractArray, WeightedArray}
 const MaybeWeightedVector = Union{AbstractVector, WeightedVector}
 const MaybeWeightedMatrix = Union{AbstractMatrix, WeightedMatrix}
 
-const NormWeighted = Weighted{<:Any, <:Any, true}
-const UnNormWeighted = Weighted{<:Any, <:Any, false}
-
-const ClampedWeighted = Weighted{<:Any, <:Any, <:Any, true}
-const UnClampedWeighted = Weighted{<:Any, <:Any, <:Any, false}
+# const NormWeighted = Weighted{<:Any, <:Any, true}
+# const UnNormWeighted = Weighted{<:Any, <:Any, false}
+#
+# const ClampedWeighted = Weighted{<:Any, <:Any, <:Any, true}
+# const UnClampedWeighted = Weighted{<:Any, <:Any, <:Any, false}
 
 const AbsVec = AbstractVector
 const AbsMat = AbstractMatrix
@@ -46,7 +53,7 @@ const AbsArray = AbstractArray
 
 ##### Constructors
 
-using LinearAlgebra: rmul!
+using LinearAlgebra
 
 """
     x = Weighted(array, weights)
@@ -109,15 +116,24 @@ aname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, string(s))
 addname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, o.aname * string(s))
 addlname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, string(s) * o.aname)
 
+function LinearAlgebra.rmul!(x::Weighted, λ::Number)
+    rmul!(x.array, λ)
+    if x.opt.clamp
+        o = x.opt
+        o = set(@lens(_.lo), o, λ * o.lo)
+        o = set(@lens(_.hi), o, λ * o.hi)
+        x.opt = o
+    end
+    x
+end
 
 ##### Copying
 
 Base.copy(x::Weighted) = Weighted(Base.copy(x.array), Base.copy(x.weights), x.opt)
-Base.copy!(x::Weighted, y::Weighted) = begin copy!(x.array, y.array); copy!(x.weights, y.weights); x end
+Base.copyto!(x::Weighted, y::Weighted) = begin copyto!(x.array, y.array); copyto!(x.weights, y.weights); x end
 
-## may need more
 wcopy!(x::Weighted, vec::AbsVec) = (x.weights = clamp.(vec,0,Inf); x)
-wcopy(x::Weighted, vec::AbsVec) = Weighted(copy(x.array), clamp.(vec,0,Inf), x.opt)
+wcopy(x::Weighted, vec::AbsVec) = Weighted(x.array, clamp.(vec,0,Inf), x.opt) ## only weights are copied!
 
 
 ##### Extractors
@@ -125,8 +141,9 @@ wcopy(x::Weighted, vec::AbsVec) = Weighted(copy(x.array), clamp.(vec,0,Inf), x.o
 array(x::Weighted) = x.array
 array(x) = x
 
-weights(x::ClampedWeighted) = x.weights .* (1/sum(x.weights))
-weights(x::UnClampedWeighted) = x.weights
+# weights(x::ClampedWeighted) = x.weights .* (1/sum(x.weights))
+# weights(x::UnClampedWeighted) = x.weights
+weights(x::Weighted) = x.opt.clamp ? x.weights .* (1/sum(x.weights)) : x.weights
 
 totweight(x::Weighted) = sum(x.weights)
 maxweight(x::Weighted) = maximum(x.weights)
@@ -142,6 +159,10 @@ using Lazy: @forward
 
 lastlength(x) = size(x, ndims(x))
 
+# using StaticArrays
+#
+# svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(x.array)) ## not type-stable
+
 
 ##### Standardisers
 
@@ -149,10 +170,15 @@ lastlength(x) = size(x, ndims(x))
     clamp!(x::Weighted)
 Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, then clamps `x.array` using `lo,hi` from `x.opt`.
 """
-Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
-Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
+# Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
+# Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
+function Base.clamp!(x::Weighted)
+    clamp!(x.weights, 0.0, Inf)
+    x.opt.clamp && clamp!(x.array, x.opt.lo, x.opt.hi)
+    x
+end
 
-function Base.clamp(o::WeightOpt, lo, hi)
+function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
     o = set(@lens(_.clamp), o, true)
     o = set(@lens(_.lo), o, lo)
     o = set(@lens(_.hi), o, hi)
@@ -161,21 +187,23 @@ end
 unclamp(o::WeightOpt) = set(@lens(_.clamp), o, false)
 
 """
-    normalise(x) ## with an s, NB! 
+    normalise(x) ## with an s, NB!
     normalise!(x)
 Ensures weights are positive and sum to 1.
 On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`; the copying form sets this flag.
 """
 normalise(x::AbsVec) = rmul!(clamp.(x, 0,Inf), 1/sum(x))
-normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
 @doc @doc(normalise)
-normalise!(x::NormWeighted) = begin normalise!(x.weights); x end
-normalise!(x::UnNormWeighted) = x
+normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
+# normalise!(x::NormWeighted) = begin normalise!(x.weights); x end
+# normalise!(x::UnNormWeighted) = x
+normalise!(x::Weighted) = begin x.opt.norm && normalise!(x.weights); x end
 
 normalise(o::WeightOpt) = set(@lens(_.norm), o, true)
 unnormalise(o::WeightOpt) = set(@lens(_.norm), o, false)
 
 normalise(x::Weighted) = Weighted(copy(x.array), normalise(x.weights), normalise(x.opt))
+
 
 ##### Flatten
 
@@ -241,7 +269,7 @@ function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
     if x.opt.norm
         println(io, "\nwith ", length(x.weights), " normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
     else
-        println(io, "\nwith  ", length(x.weights), " un-normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
+        println(io, "\nwith ", length(x.weights), " un-normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
     end
     Base.print_array(ioc, weights(x)')
 

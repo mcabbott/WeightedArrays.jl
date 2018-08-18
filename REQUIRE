@@ -1,4 +1,6 @@
-GroupSlices
+GroupSlices ## https://github.com/mcabbott/GroupSlices.jl branch julia07fixes
+JLD2
+JSON
 Lazy
 LinearAlgebra
 MultivariateStats

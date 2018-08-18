@@ -142,7 +142,7 @@ end
 
 function shadowxy(x::Vector, y::Vector, smooth=(maximum(x)-minimum(x))/100, numpoints=321; fixmax=true)
     @assert length(x)==length(y)
-    xlist = linspace(minimum(x)-10*smooth, maximum(x)+10*smooth, numpoints)
+    xlist = range(minimum(x)-10*smooth, stop=maximum(x)+10*smooth, length=numpoints)
     ylist = zeros(numpoints)
     invtst = 1/(2*smooth^2)
     for i=1:numpoints
