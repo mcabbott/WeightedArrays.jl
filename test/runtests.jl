@@ -1,4 +1,9 @@
 
+using Pkg
+
+Pkg.clone("https://github.com/mcabbott/GroupSlices.jl")
+Pkg.checkout("GroupSlices", "julia07fixes")
+
 using WeightedArrays
 using Test
 

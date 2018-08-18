@@ -170,13 +170,13 @@ lastlength(x) = size(x, ndims(x))
     clamp!(x::Weighted)
 Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, then clamps `x.array` using `lo,hi` from `x.opt`.
 """
-# Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
-# Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
 function Base.clamp!(x::Weighted)
     clamp!(x.weights, 0.0, Inf)
     x.opt.clamp && clamp!(x.array, x.opt.lo, x.opt.hi)
     x
 end
+# Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
+# Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
     o = set(@lens(_.clamp), o, true)
