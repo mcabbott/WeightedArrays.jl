@@ -20,5 +20,6 @@ RecipesBase
 Requires
 Setfield
 Sobol
+SpecialFunctions
 StaticArrays
 StatsBase
