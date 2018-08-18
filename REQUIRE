@@ -2,9 +2,9 @@ julia 0.7
 
 # https://discourse.julialang.org/t/pkg3-for-package-developers/13040
 
-LinearAlgebra
-Statistics
-SpecialFunctions
+# LinearAlgebra
+# Statistics
+# SpecialFunctions
 
 # ERROR: The following package names could not be resolved:
 # * LinearAlgebra (not found in project, manifest or registry)
@@ -14,14 +14,11 @@ GroupSlices ## ] add https://github.com/mcabbott/GroupSlices.jl#julia07fixes
 JLD2
 JSON
 Lazy
-LinearAlgebra
 MultivariateStats
 Parameters
 RecipesBase
 Requires
 Setfield
 Sobol
-SpecialFunctions
 StaticArrays
 StatsBase
-Statistics
