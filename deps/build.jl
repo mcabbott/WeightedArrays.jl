@@ -4,8 +4,8 @@ using Pkg
 
 Pkg.rm("GroupSlices")
 
-@info "removed"
+@info "removed GroupSlices"
 
-Pkg.add(PackageSpec(name = "https://github.com/mcabbott/GroupSlices.jl", rev = "julia07fixes"))
+Pkg.add(PackageSpec(name="GroupSlices", url="https://github.com/mcabbott/GroupSlices.jl", rev="julia07fixes"))
 
-@info "added!" 
+@info "added GroupSlices"
