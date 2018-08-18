@@ -1,16 +1,4 @@
 
-using Pkg
-
-try
-    Pkg.rm("GroupSlices")
-catch
-    @warn "didn't remove GS"
-end
-Pkg.add(PackageSpec(name = "https://github.com/mcabbott/GroupSlices.jl", rev = "julia07fixes"))
-
-# Pkg.clone("https://github.com/mcabbott/GroupSlices.jl")
-# Pkg.checkout("GroupSlices", "julia07fixes")
-
 using WeightedArrays
 using Test
 
