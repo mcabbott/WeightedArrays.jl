@@ -5,7 +5,8 @@ I'm in the process of separated this out & upgrading to Julia 0.7.
 
 What's working:
 * sobol, wrand, etc.
-* unique (but test errors from wrong GroupSlices version)
+* unique (with right GroupSlices version)
+* hcat
 * PCA (but with warnings from MultivariateStats)
 * plots
 
