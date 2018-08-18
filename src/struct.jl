@@ -26,7 +26,7 @@ mutable struct Weighted{T1,T2}
     opt::WeightOpt
 
     function Weighted(array::T1, weights::T2, opt::WeightOpt) where {T1<:AbstractArray,T2<:AbstractVector}
-        size(array,ndims(array)) == length(weights) || error("length of weights much match size of last dimension of array")
+        size(array,ndims(array)) == length(weights) || @error "length of weights much match size of last dimension of array"
         # new{T1, T2, opt.norm, opt.clamp, opt.like}(array, weights, opt)
         new{T1, T2}(array, weights, opt)
     end
@@ -85,22 +85,25 @@ WeightedMatrix(x::AbsMat, rest... ; kw...) = Weighted(x, rest...; kw...)
 WeightedMatrix(x::AbsVec, rest... ; kw...) = Weighted(reshape(x,:,1), rest...; kw...)
 
 """
-    hcat(x::WeightedMatrix, y::WeightedMatrix, ...)
+    hcat(x::WeightedMatrix, y, z...)
     x + y
 These will `hcat` the arrays, and `vcat` the weights.
 """
-function Base.hcat(x::Weighted, zz::Vararg{Weighted})
+function Base.hcat(x::Weighted, zz::Vararg{Union{Weighted, AbstractArray}})
     if length(x.array)==0
         if length(zz)==1 return zz[1]
         else return hcat(zz...)
         end
     end
-    array = hcat(x.array, [z.array for z in zz]...)
-    weights = vcat(x.weights, [z.weights for z in zz]...)
-    Weighted(array, weights, x.opt)
+    arr = hcat(x.array, [array(z) for z in zz]...)
+    wei = vcat(x.weights, [sureweights(z) for z in zz]...)
+    Weighted(arr, wei, x.opt)
 end
 
-Base.:+(x::Weighted, y::Weighted) = hcat(x,y)
+sureweights(x::Weighted) = x.weights
+sureweights(x) = begin n = lastlength(x); ones(n) ./ n end
+
+Base.:+(x::Weighted, y::Union{AbsArray, Weighted}) = hcat(x,y)
 
 """
     λ*Π

@@ -67,7 +67,7 @@ function (xgrid(d::Int, range::AbstractRange{T}; big=false)::Matrix{T}) where T
     d==1 && return Matrix(collect(range)')
 
     n = length(range)
-    !big && n^d > 4_000_000 && error("xgrid is happiest with n^d = < 4×10^6, you have $n^$d... keyword big=true will disable this check")
+    !big && n^d > 4_000_000 && @error "xgrid is happiest with n^d = < 4×10^6, you have $n^$d... keyword big=true will disable this check"
 
     intcols = zeros(Int,d,n^d)
     @inbounds for i=1:n^d
@@ -78,9 +78,9 @@ function (xgrid(d::Int, range::AbstractRange{T}; big=false)::Matrix{T}) where T
 end
 
 function near(x::Matrix, y, dist::Real; verbose=false)
-    yesno = minimum( pairwise2(x,array(y)) ,2) .<= (dist^2)
-    sum(yesno)==0 && begin warn("no nearby points, returning complete matrix"); return x end
-    verbose && info("kept ",sum(yesno)," / ",size(x,2)," columns: ",round(100*sum(yesno)/size(x,2),2)," percent")
+    yesno = minimum( pairwise2(x,array(y)) ,dims=2) .<= (dist^2)
+    sum(yesno)==0 && begin @warn("no nearby points, returning complete matrix"); return x end
+    verbose && @info string("kept ",sum(yesno)," / ",size(x,2)," columns: ",round(100*sum(yesno)/size(x,2),2)," percent")
     x[:,vec(yesno)]
 end
 
