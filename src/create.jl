@@ -84,18 +84,18 @@ function near(x::Matrix, y, dist::Real; verbose=false)
     x[:,vec(yesno)]
 end
 
-# using Distances
-#
-# """
-#     pairwise2(x, y=x) = Distances.pairwise(SqEuclidean(), x, y)
-# Resulting `mat[i,j]` is distance sqared from `x[:,i]` to `y[:,j]`. Implementation varies.
-# """
-# pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y)
-# pairwise2(x::Matrix) = pairwise(SqEuclidean(), x)
+using Distances
+
+"""
+    pairwise2(x, y=x) = Distances.pairwise(SqEuclidean(), x, y)
+Resulting `mat[i,j]` is distance sqared from `x[:,i]` to `y[:,j]`. Implementation varies.
+"""
+pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y)
+pairwise2(x::Matrix) = pairwise(SqEuclidean(), x)
 
 pairwise2(x::AbsMat, y::AbsMat) = diag(x'*x) .+ diag(y'*y)' .- 2x'*y
-# function pairwise2(x::AbsMat) # = diag(x'*x) .+ diag(x'*x)' .- 2x'*x
-#     mat = x'*x
-#     vec = diag(mat)
-#     vec .+ vec' .- 2 .* mat
-# end
+function pairwise2(x::AbsMat) # = diag(x'*x) .+ diag(x'*x)' .- 2x'*x
+    mat = x'*x
+    vec = diag(mat)
+    vec .+ vec' .- 2 .* mat
+end

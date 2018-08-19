@@ -1,5 +1,6 @@
 julia 0.7
 
+Distances
 GroupSlices ## ] add https://github.com/mcabbott/GroupSlices.jl#julia07fixes
 JLD2
 JSON

@@ -1,6 +1,6 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, normalise, normalise!, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!
+export array, weights, lastlength, normalise, normalise!, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
 export AbsVec, AbsMat, AbsArray
 
 using Parameters
@@ -65,15 +65,15 @@ Calling `normalise!(x)` will re-enforce this, after scaling `2x` or `hcat()`-ing
 Here every `θ ∈ array` is constrained `lo ≦ θ ≦ hi`, the same for all dimensions. (Weights are similarly `0 ≦ λ < ∞`.)
 Calling `clamp!(x)` will re-enforce these box constraints, for instance after mutating `x[1,2] *= 3` or on `y = x .+ 0.4`.
 """
-function Weighted(array::AbsMat, vector::AbsVec = ones(lastlength(array)); norm=true)
+function Weighted(array::AbsArray, vector::AbsVec = ones(lastlength(array)); norm=true)
     weights = clamp.(vector,0,Inf)
     norm && rmul!(weights, 1/sum(weights))
     Weighted(array, weights, WeightOpt(norm=norm))
 end
 
-Weighted(array::AbsMat, lo::Real, hi::Real; norm=true) = Weighted(array, ones(lastlength(array)), lo, hi; norm=norm)
+Weighted(array::AbsArray, lo::Real, hi::Real; norm=true) = Weighted(array, ones(lastlength(array)), lo, hi; norm=norm)
 
-function Weighted(array::AbsMat, vector::AbsVec, lo::Real, hi::Real; norm=true)
+function Weighted(array::AbsArray, vector::AbsVec, lo::Real, hi::Real; norm=true)
     weights = clamp.(vector,0,Inf)
     norm && rmul!(weights, 1/sum(weights))
     Weighted(clamp.(array,lo,hi), weights, WeightOpt(norm=norm, clamp=true, lo=lo, hi=hi))
@@ -144,9 +144,11 @@ wcopy(x::Weighted, vec::AbsVec) = Weighted(x.array, clamp.(vec,0,Inf), x.opt) ##
 array(x::Weighted) = x.array
 array(x) = x
 
-# weights(x::ClampedWeighted) = x.weights .* (1/sum(x.weights))
-# weights(x::UnClampedWeighted) = x.weights
-weights(x::Weighted) = x.opt.clamp ? x.weights .* (1/sum(x.weights)) : x.weights
+# weights(x::NormWeighted) = x.weights .* (1/sum(x.weights))
+# weights(x::UnNormWeighted) = x.weights
+weights(x::Weighted) = x.opt.norm ? x.weights .* (1/sum(positive, x.weights)) : x.weights
+
+positive(x) = max(x,zero(x))
 
 totweight(x::Weighted) = sum(x.weights)
 maxweight(x::Weighted) = maximum(x.weights)
@@ -162,9 +164,9 @@ using Lazy: @forward
 
 lastlength(x) = size(x, ndims(x))
 
-# using StaticArrays
-#
-# svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(x.array)) ## not type-stable
+using StaticArrays
+
+svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(x.array)) ## not type-stable
 
 
 ##### Standardisers
@@ -195,7 +197,7 @@ unclamp(o::WeightOpt) = set(@lens(_.clamp), o, false)
 Ensures weights are positive and sum to 1.
 On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`; the copying form sets this flag.
 """
-normalise(x::AbsVec) = rmul!(clamp.(x, 0,Inf), 1/sum(x))
+normalise(x::AbsVec) = begin itot = 1/sum(positive,x); itot .* clamp.(x, 0,Inf) end
 @doc @doc(normalise)
 normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
 # normalise!(x::NormWeighted) = begin normalise!(x.weights); x end
