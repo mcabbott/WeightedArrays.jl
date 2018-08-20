@@ -158,6 +158,10 @@ end
     unique!(fun(x))
 end
 
+@recipe function f(x::Weighted, λ::Number)
+    rmul!(copy(x), λ)
+end
+
 # @recipe function f(m::MultiModel; sz=1)
 #     legend --> :topleft
 #     for i=1:length(m)
@@ -177,10 +181,16 @@ function __init__()
             pplot(x::Weighted)
             pplot!(x)
         The first calls `sPCA`, the second calls `rPCA` to plot on the same axes.
-        """
-        pplot(x::Weighted, f::Function=identity; kw...) = Plots.plot(sPCA(f(x)); kw...)
 
-        pplot!(x::Weighted, f::Function=identity; kw...) = Plots.plot!(rPCA(f(x)); kw...)
+            pplot(x, f)
+            pplot(x, λ)
+        Ditto, but first applies function `f`, or scales by `λ`.
+        """
+        pplot(x::Weighted, f::Function=identity; kw...) = Plots.plot(sPCA(unique!(f(x))); kw...)
+        pplot(x::Weighted, λ::Number; kw...) = Plots.plot(rmul!(sPCA(x),λ); kw...)
+
+        pplot!(x::Weighted, f::Function=identity; kw...) = Plots.plot!(rPCA(unique!(f(x))); kw...)
+        pplot!(x::Weighted, λ::Number; kw...) = Plots.plot!(rmul!(rPCA(x),λ); kw...)
 
     end
 end

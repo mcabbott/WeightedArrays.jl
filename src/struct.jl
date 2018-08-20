@@ -1,6 +1,6 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, normalise, normalise!, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
+export array, weights, lastlength, normalise, normalise!, unnormalise, totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
 export AbsVec, AbsMat, AbsArray
 
 using Parameters
@@ -105,12 +105,18 @@ sureweights(x) = begin n = lastlength(x); ones(n) ./ n end
 
 Base.:+(x::Weighted, y::Union{AbsArray, Weighted}) = hcat(x,y)
 
-"""
-    λ*Π
-For `Π::Weighted` this will scale `Π.weights` by `λ`.
-"""
-Base.:*(λ::Number, x::Weighted) = Weighted(x.array, λ .* x.weights, x.opt)
-Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
+# """
+#     λ*Π
+# For `Π::Weighted` this will scale `Π.weights` by `λ`.
+# """
+# Base.:*(λ::Number, x::Weighted) = Weighted(x.array, λ .* x.weights, x.opt)
+# Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
+# """
+#     λ*Π
+# For `Π::Weighted` this will scale `Π.array` by `λ`. NB this is the OPPOSITE of what it did in 0.6, sorry.
+# """
+# Base.:*(x::Weighted, λ::Number) = x * λ
+# Base.:*(x::Weighted, λ::Number) = rmul!(copy(x),λ)
 
 using Setfield
 
@@ -174,6 +180,9 @@ svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(
 """
     clamp!(x::Weighted)
 Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, then clamps `x.array` using `lo,hi` from `x.opt`.
+    clamp(x, lo, hi)
+    clamp!(x, lo, hi)
+These alter the flag `x.opt.clamp` & then proceed.
 """
 function Base.clamp!(x::Weighted)
     clamp!(x.weights, 0.0, Inf)
@@ -182,6 +191,9 @@ function Base.clamp!(x::Weighted)
 end
 # Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
 # Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
+
+Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
+Base.clamp(x::Weighted, lo::Real, hi::Real) = clamp!(copy(x), lo, hi)
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
     o = set(@lens(_.clamp), o, true)
@@ -208,7 +220,7 @@ normalise(o::WeightOpt) = set(@lens(_.norm), o, true)
 unnormalise(o::WeightOpt) = set(@lens(_.norm), o, false)
 
 normalise(x::Weighted) = Weighted(copy(x.array), normalise(x.weights), normalise(x.opt))
-
+unnormalise(x::Weighted) =  Weighted(copy(x.array), copy(x.weights), unnormalise(x.opt))
 
 ##### Flatten
 
@@ -272,13 +284,25 @@ function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
 
     length(x.weights)==0 && return nothing ## don't remember why
     if x.opt.norm
-        println(io, "\nwith ", length(x.weights), " normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
+        # println(io, "\nwith ", length(x.weights), " normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
+        println(io, "\nwith normalised weights ",x.opt.wname,", ", summary(x.weights), ":")
     else
-        println(io, "\nwith ", length(x.weights), " un-normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
+        # println(io, "\nwith ", length(x.weights), " un-normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
+        println(io, "\nwith un-normalised weights ",x.opt.wname,", ", summary(x.weights), ":")
     end
     Base.print_array(ioc, weights(x)')
 
     if x.opt.norm && !isapprox(totweight(x), 1)
         print(io, "\nlazily normalised by weights(), raw total = ", round(totweight(x); digits=3), ".")
+    end
+end
+
+function Base.summary(io::IO, x::Weighted)
+    print(io, "Weighted ", summary(x.array))
+    x.opt.clamp && print(io, " clamped to ",x.opt.lo," ... ",x.opt.hi,",")
+    if x.opt.norm
+        print(io, " with normalised weights ", summary(x.weights))
+    else
+        print(io, " with weights ", summary(x.weights))
     end
 end
