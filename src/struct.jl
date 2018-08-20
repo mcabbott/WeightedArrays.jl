@@ -152,11 +152,11 @@ array(x) = x
 
 # weights(x::NormWeighted) = x.weights .* (1/sum(x.weights))
 # weights(x::UnNormWeighted) = x.weights
-weights(x::Weighted) = x.opt.norm ? x.weights .* (1/sum(positive, x.weights)) : x.weights
+weights(x::Weighted) = x.opt.norm ? x.weights .* (1/sum(x.weights)) : x.weights ## sum(positive, x.weights) gives exotic problems
 
 positive(x) = max(x,zero(x))
 
-totweight(x::Weighted) = sum(x.weights)
+totweight(x::Weighted) = sum(positive, x.weights)
 maxweight(x::Weighted) = maximum(x.weights)
 
 Base.getindex(x::Weighted, rr::AbsVec{Int}, c::Colon) = Weighted(x.array[rr,c], x.weights,  x.opt) ## get some dimensions
@@ -185,7 +185,7 @@ Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`
 These alter the flag `x.opt.clamp` & then proceed.
 """
 function Base.clamp!(x::Weighted)
-    clamp!(x.weights, 0.0, Inf)
+    clamp!(x.weights, 0, Inf)
     x.opt.clamp && clamp!(x.array, x.opt.lo, x.opt.hi)
     x
 end
