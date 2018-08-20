@@ -48,11 +48,15 @@ function Base.sortcols(x::WeightedMatrix; kw...)
 end
 
 """
-    round(x::Weights; digits)
+    round(x::Weighted; digits)
 Rounds off θ `x.array`... digits need not be an integer. Always rounds -0.0 to 0.0, too.
+    myround(x, digits)
+Works without keywords!
 """
 Base.round(x::Weighted; digits::Real=DIGITS) =
-    Weighted( myround.(x.array, dig), x.weights, x.opt )
+    Weighted( myround.(x.array, digits), x.weights, x.opt )
+
+myround(x::Weighted, digits::Real=DIGITS) = round(x; digits=digits)
 
 function myround(num::Real, dig::Real=DIGITS) ## this allows me to round(π, 1.5)
     factor = 10^(dig-floor(dig))
@@ -159,6 +163,17 @@ end
 
 clip(x::Weighted, ϵ::Real=MINPROB) = clip.(x, ϵ)
 clip!(x::Weighted, ϵ::Real=MINPROB) = begin clip!(x.array, ϵ); x end
+
+"""
+    mapslices(f, x::Weighted)
+If no dimensions are given, then `f` acts on slices `x.array[:,...:, c]` for `c=1:lastlength(x)`.
+`x.weights` are untouched. 
+"""
+function Base.mapslices(f::Function, x::Weighted; dims=collect(1:ndims(x)-1))
+    array = mapslices(f, x.array; dims=dims)
+    @assert size(array, ndims(array)) == length(x.weights) "mapslices must preserve lastlength(array)"
+    Weighted(array, x.weights, aname(x.opt, "map"))
+end
 
 
 """    log(Π)
