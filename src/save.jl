@@ -1,7 +1,8 @@
 
 export save, load
 
-import JLD2
+# import JLD2
+using DelimitedFiles
 
 """
     save(Π, "file.csv") = writecsv("file.csv", Π)
@@ -19,6 +20,7 @@ Save `Π::Weighted` to disk, in one of several formats:
   ... and then maybe `Style @@@ Thread[{arr, PointSize /@ (0.3*Sqrt[wei]), Opacity[0.5]}] // ListPlot` ?
 
 * JLD: built-in HDF5 format binary saving, fast & neat but perhaps fragile.
+  Removed for now!
 
 
     Π = load("file.csv") = readcsv("file.csv", Π)
@@ -31,8 +33,8 @@ function save(x::Weighted, file::String; verbose=true)
         writecsv(file, x)
     elseif endswith(file, ".json")
         writejson(file, x)
-    elseif endswith(file, ".jld")
-        JLD.save(file, "Π", x)
+    # elseif endswith(file, ".jld")
+    #     JLD.save(file, "Π", x)
     else
         error("load doesn't understand file extension of $file")
     end
@@ -46,20 +48,20 @@ function load(file::String)
         readcsv(file, Weighted)
     elseif endswith(file, ".json")
         readjson(file)
-    elseif endswith(file, ".jld")
-        JLD.load(file, "Π")
+    # elseif endswith(file, ".jld")
+    #     JLD.load(file, "Π")
     else
         error("save doesn't understand file extension of $file")
     end
 end
 
 
-Base.writecsv(io, x::Weighted; kw...) = writecsv(io, [x.array' x.weights]; kw...)
+writecsv(io, x::Weighted; kw...) = writedlm(io, [x.array' x.weights], ','; kw...)
 
-function Base.readcsv(io, T::Type{Weighted}; kw...)
+function readcsv(io, T::Type{Weighted}; kw...)
 
-    mat = readcsv(io; kw...)
-    array = mat[:, 1:end-1]'
+    mat = readdlm(io, ','; kw...)
+    array = mat[:, 1:end-1]' |> copy
     weights = mat[:,end]
 
     norm = sum(weights)≈1
@@ -69,12 +71,12 @@ function Base.readcsv(io, T::Type{Weighted}; kw...)
         clamp,lo,hi = false,-Inf,Inf
     end
     if endswith(string(io), ".csv")
-        names = string(io)[1:end-4] |> Symbol
+        aname = string(io)[1:end-4] |> Symbol
     else
-        names = string(io) |> Symbol
+        aname = string(io) |> Symbol
     end
 
-    Weighted(array, weights, WeightOpt(norm, clamp,lo,hi, names))
+    Weighted(array, weights, WeightOpt(norm=norm, clamp=clamp,lo=lo,hi=hi, aname=aname))
 end
 
 # Base.writecsv(io, x::Weighted; kw...) = writecsv(io, (x.array, x.weights, [x.opt.norm, x.opt.clamp, x.opt.lo, x.opt.lo, x.opt.names]); kw...)
@@ -91,7 +93,7 @@ function readjson(io)
 
     array = reduce(hcat, d["array"]) |> Matrix{Float64}
     weights = d["weights"] |> Vector{Float64}
-    opt = eval(parse(d["opt"]))
+    opt = eval(Meta.parse(d["opt"]))
 
     Weighted(array, weights, opt)
 end

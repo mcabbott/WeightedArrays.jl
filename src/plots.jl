@@ -175,6 +175,7 @@ end
 using Requires
 
 function __init__()
+# function init_plot_req()
     @require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
 
         """

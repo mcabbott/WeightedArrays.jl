@@ -99,3 +99,14 @@ function pairwise2(x::AbsMat) # = diag(x'*x) .+ diag(x'*x)' .- 2x'*x
     vec = diag(mat)
     vec .+ vec' .- 2 .* mat
 end
+
+# using Requires
+#
+# function init_create_req()
+#     @require Distances = "???" begin
+#
+# 	pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y)
+# 	pairwise2(x::Matrix) = pairwise(SqEuclidean(), x)
+#
+# 	end # @require
+# end

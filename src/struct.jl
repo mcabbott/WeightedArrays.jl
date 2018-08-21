@@ -1,11 +1,12 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, normalise, normalise!, unnormalise, totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
+export array, weights, lastlength, normalise, normalise!, unnormalise, unnormalise!, 
+	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
 export AbsVec, AbsMat, AbsArray
 
 using Parameters
 
-@with_kw struct WeightOpt
+@with_kw_noshow struct WeightOpt
     norm::Bool = true
     clamp::Bool = false
     lo::Float64 = 0.0
@@ -207,7 +208,12 @@ unclamp(o::WeightOpt) = set(@lens(_.clamp), o, false)
     normalise(x) ## with an s, NB!
     normalise!(x)
 Ensures weights are positive and sum to 1.
-On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`; the copying form sets this flag.
+On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`; 
+the copying (!) form sets this flag first.
+
+	unnormalise(x)
+	unnormalise!(x)
+Just alters the flag `x.opt.norm`.
 """
 normalise(x::AbsVec) = begin itot = 1/sum(positive,x); itot .* clamp.(x, 0,Inf) end
 @doc @doc(normalise)
@@ -220,7 +226,9 @@ normalise(o::WeightOpt) = set(@lens(_.norm), o, true)
 unnormalise(o::WeightOpt) = set(@lens(_.norm), o, false)
 
 normalise(x::Weighted) = Weighted(copy(x.array), normalise(x.weights), normalise(x.opt))
+
 unnormalise(x::Weighted) =  Weighted(copy(x.array), copy(x.weights), unnormalise(x.opt))
+unnormalise!(x::Weighted) =  begin x.opt = unnormalise(x.opt); x end
 
 ##### Flatten
 
@@ -263,6 +271,16 @@ function Base.show(io::IO, x::Weighted) ## compact, re-digestable
     x.opt.clamp && print(io, ", ", x.opt.lo, ", ", x.opt.hi )
     x.opt.norm  || print(io, "; norm=false")
     print(io, " )")
+end
+
+function Base.show(io::IO, o::WeightOpt) ## compact, re-digestable
+	print(io, "WeightOpt(")
+	o.norm || print(io, "norm=false, ")
+	o.clamp && print(io, "clamp=true, lo=",o.lo,", hi=",o.hi,", ")
+    o.aname !== "θ" && print(io, "aname=",o.aname,", ")
+    o.wname != "p(θ)" && print(io, "wname=",o.wname,", ")
+    o.like && print(io, "like=true")
+	print(io, ")")
 end
 
 function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
