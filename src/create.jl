@@ -11,6 +11,7 @@ Default is now `k=1`, making a one-column matrix.
 
     wrandn(d, k) = π .* Weighted(randn(d, k))
 Normally distributed `d`-vectors, of mean zero and std. dev. `scale=π` by default.
+Keyword `max=10` clamps absolute values to be less than this. 
 
     wrandnp(d, k)
 Absolute value of normally distributed...
@@ -18,11 +19,16 @@ Absolute value of normally distributed...
 wrand(d::Int, k::Int=1; weights=true) = Weighted( rand(d,k), weights ? 1 .+ rand(k) : ones(k) ,0,1)
 
 @doc @doc(wrand)
-wrandn(d::Int, k::Int=1; scale=π, weights=true) = Weighted( scale .* randn(d,k), weights ? 1 .+ rand(k) : ones(k) )
+function wrandn(d::Int, k::Int=1; scale=π, weights=true, max=Inf)
+    out = Weighted( scale .* randn(d,k), weights ? 1 .+ rand(k) : ones(k) )
+    max==Inf ? out : clamp!(out, -max, max)
+end
 
 @doc @doc(wrand)
-wrandnp(d::Int, k::Int=1; scale=π, weights=true) = Weighted( abs.(scale .* randn(d,k)), weights ? 1 .+ rand(k) : ones(k), 0,Inf)
-
+function wrandnp(d::Int, k::Int=1; scale=π, weights=true, max=Inf)
+    out = Weighted( abs.(scale .* randn(d,k)), weights ? 1 .+ rand(k) : ones(k), 0,Inf)
+    max==Inf ? out : clamp!(out, 0, max)
+end
 
 ##### sub-random
 

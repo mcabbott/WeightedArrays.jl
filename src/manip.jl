@@ -1,5 +1,5 @@
 
-export maxcol, myround, clip, clip!, trim, trim!, sigmoid
+export maxcol, myround, clip, clip!, trim, trim!, MINWEIGHT, MINPROB
 
 const MINWEIGHT = 1e-10 ## trim() deletes prior points with less than this weight.
 const MINPROB = 1e-100  ## clip() sets to zero entries smaller than this.

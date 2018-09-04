@@ -1,6 +1,7 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, normalise, normalise!, unnormalise, unnormalise!, 
+export array, weights, lastlength, aname, wname, unclamp, 
+    normalise, normalise!, unnormalise, unnormalise!, 
 	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
 export AbsVec, AbsMat, AbsArray
 
@@ -166,7 +167,7 @@ Base.getindex(x::Weighted, r::Colon, cc::AbsVec{Int}) = Weighted(x.array[r,cc], 
 using Lazy: @forward
 
 @forward Weighted.array  Base.size, Base.ndims, Base.eltype, Base.getindex, Base.setindex!,
-#    Base.start, Base.next, Base.done, Base.endof,
+    Base.iterate, Base.lastindex, 
     Base.minimum, Base.maximum, Base.extrema
 
 lastlength(x) = size(x, ndims(x))
@@ -290,7 +291,7 @@ function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
     if x.opt.like
         println(io, ", likelihood ", x.opt.aname,":")
     elseif x.opt.clamp
-        println(io, ", clamped ", x.opt.lo, " ≦ ", x.opt.aname, " ≦ ", x.opt.hi,":")
+        println(io, ", clamped ", round(x.opt.lo, digits=3), " ≦ ", x.opt.aname, " ≦ ", round(x.opt.hi, digits=3), ":")
     else
         println(io, ", of unclamped ", x.opt.aname,":")
     end
@@ -302,11 +303,9 @@ function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
 
     length(x.weights)==0 && return nothing ## don't remember why
     if x.opt.norm
-        # println(io, "\nwith ", length(x.weights), " normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
         println(io, "\nwith normalised weights ",x.opt.wname,", ", summary(x.weights), ":")
     else
-        # println(io, "\nwith ", length(x.weights), " un-normalised weights ",x.opt.wname,", ", typeof(x.weights), ":")
-        println(io, "\nwith un-normalised weights ",x.opt.wname,", ", summary(x.weights), ":")
+        println(io, "\nwith weights ",x.opt.wname,", ", summary(x.weights), ":")
     end
     Base.print_array(ioc, weights(x)')
 
@@ -317,7 +316,7 @@ end
 
 function Base.summary(io::IO, x::Weighted)
     print(io, "Weighted ", summary(x.array))
-    x.opt.clamp && print(io, " clamped to ",x.opt.lo," ... ",x.opt.hi,",")
+    x.opt.clamp && print(io, " clamped to ", round(x.opt.lo, digits=3), " ... ", round(x.opt.hi, digits=3), ",")
     if x.opt.norm
         print(io, " with normalised weights ", summary(x.weights))
     else
