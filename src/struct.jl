@@ -198,12 +198,12 @@ Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi
 Base.clamp(x::Weighted, lo::Real, hi::Real) = clamp!(copy(x), lo, hi)
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
-    o = set(@lens(_.clamp), o, true)
-    o = set(@lens(_.lo), o, lo)
-    o = set(@lens(_.hi), o, hi)
+    o = set(o, @lens(_.clamp), true)
+    o = set(o, @lens(_.lo), lo)
+    o = set(o, @lens(_.hi), hi)
     o
 end
-unclamp(o::WeightOpt) = set(@lens(_.clamp), o, false)
+unclamp(o::WeightOpt) = set(o, @lens(_.clamp), false)
 
 """
     normalise(x) ## with an s, NB!
@@ -223,8 +223,8 @@ normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
 # normalise!(x::UnNormWeighted) = x
 normalise!(x::Weighted) = begin x.opt.norm && normalise!(x.weights); x end
 
-normalise(o::WeightOpt) = set(@lens(_.norm), o, true)
-unnormalise(o::WeightOpt) = set(@lens(_.norm), o, false)
+normalise(o::WeightOpt) = set(o, @lens(_.norm), true)
+unnormalise(o::WeightOpt) = set(o, @lens(_.norm), false)
 
 normalise(x::Weighted) = Weighted(copy(x.array), normalise(x.weights), normalise(x.opt))
 
