@@ -9,11 +9,11 @@ What's working:
 * hcat
 * PCA (but with warnings from MultivariateStats)
 * plots
+* saving
 
 Still to do:
 * slicing
 * symm
 * broadcasting
-* saving
 
 [![Build Status](https://travis-ci.org/mcabbott/WeightedArrays.jl.svg?branch=master)](https://travis-ci.org/mcabbott/WeightedArrays.jl)

@@ -23,9 +23,8 @@ Returns the column of `x` with the largest weight, as the same type.
 If `x::Weighted{Matrix}` then weights need not be given.
 """
 function maxcol(x::Weighted{<:AbsMat}, λ=x.weights)
-# function maxcol(x::Weighted{T1,T2,N,C,L}, λ=x.weights) where {T1<:AbsMat,T2,N,C,L}
     (m,i) = findmax(λ)
-    Weighted(x.array[:, i:i], [x.weights[i]], unnormalise(x.opt))#::Weighted{T1,T2,false,C,L} ## otherwise type-unstable
+    Weighted(x.array[:, i:i], [x.weights[i]], unnormalise(x.opt))
 end
 maxcol(x::AbsMat, λ::AbsVec) = begin (m,i) = findmax(λ); x[:, i:i] end
 
@@ -67,35 +66,41 @@ myround(num::Real, dig::Int) = round(num; digits=dig) |> flipzero
 flipzero(x::Real) = ifelse(x==-0.0, zero(x), x)
 
 using GroupSlices
+using EllipsisNotation
 
-"""
+uniquedoc = """
     unique!(x::Weighted)
     unique!(x, f) = unique!(x, f(x))
-Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digitsits,
-and after applying function `f` if given. There is also non-mutating `unique`.
+Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digits,
+and after applying function `f` if given. Now works for any `ndims(x)`.
+
+    `unique`
+Non-mutating version. 
+Note BTW that both of these return `x` partially sorted, done so that among nearly co-incident points, 
+the position of the heaviest is kept. But the result is not sure to be completely sorted.
 """
-Base.unique!(x::WeightedMatrix, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
-Base.unique!(x::WeightedMatrix, f::Function; kw...) = unique!(x, f(x); kw...)
+@doc uniquedoc
+Base.unique!(x::Weighted, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
+Base.unique!(x::Weighted, f::Function; kw...) = unique!(x, f(x); kw...)
 
-# @doc @doc(unique!)
-Base.unique(x::WeightedMatrix, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
-Base.unique(x::WeightedMatrix, f::Function; kw...) = unique(x, f(x); kw...)
+@doc uniquedoc
+Base.unique(x::Weighted, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
+Base.unique(x::Weighted, f::Function; kw...) = unique(x, f(x); kw...)
 
-@inline function unique_(x::WeightedMatrix, y::WeightedMatrix=x; digits=DIGITS)
+@inline function unique_(x::Weighted, y::Weighted=x; digits=DIGITS)
 
-    if size(x.array,1)==0 && size(y.array,1)==0 ## special case: cannot alter order
+    if ndims(x)==2 && size(x.array,1)==0 && size(y.array,1)==0 ## special case: cannot alter order
         return x.array, x.weights
     end
 
     perm = sortperm(y.weights, rev=true)
 
-    ind = groupslices( myround.(y.array, digits)[:,perm] ,ndims(x))
-    # ind = groupslices( y.array[:,perm] ,2)
+    ind = groupslices( myround.(y.array, digits)[..,perm] ,ndims(x))
 
     k = size(x, ndims(x))
     w = zeros(eltype(x.weights), k)
 
-    if size(x,1)==0 && size(y,1)>0 ## special case: cannot alter order, but can move weight around
+    if ndims(x)==2 && size(x,1)==0 && size(y,1)>0 ## special case: cannot alter order, but can move weight around
         for i=1:k
             w[perm[ind[i]]] += x.weights[perm[i]]
         end
@@ -108,7 +113,7 @@ Base.unique(x::WeightedMatrix, f::Function; kw...) = unique(x, f(x); kw...)
 
     uind = unique(ind)
 
-    x.array[:,perm[uind]], w[uind]
+    x.array[..,perm[uind]], w[uind] ## .. is EllipsisNotation
 end
 
 
@@ -123,26 +128,24 @@ Removes the same columns from both, using the first one's weights. Mutates both 
 trim(x::AbstractArray) = x
 trim!(x::AbstractArray) = x
 
-trim(x::Weighted; cut=MINWEIGHT) = Weighted(trim_(x; cut=cut)..., x.opt)
+trim(x::Weighted; kw...) = Weighted(trim_(x; kw...)..., x.opt)
 
 @doc @doc(trim)
-trim!(x::Weighted; cut=MINWEIGHT) = begin x.array, x.weights = trim_(x; cut=cut); x end
+trim!(x::Weighted; kw...) = begin x.array, x.weights = trim_(x; kw...); x end
 
 @inline function trim_(x::Weighted; cut=MINWEIGHT)
     keep = weights(x) .> cut
     if size(x,1)==0 ## special case used for MultiModel... do not move or delete things.
         keep[:] .= true
     end
-    ndims(x)==1 && return x.array[keep], x.weights[keep]
-    ndims(x)==2 && return x.array[:,keep], x.weights[keep]
-    error("trim & trim! don't understand >=3-index Weighted yet, sorry")
+    x.array[.., keep], x.weights[keep] ## .. is EllipsisNotation
 end
 
-function trim!(x::WeightedMatrix, y::WeightedMatrix; cut=MINWEIGHT)
+function trim!(x::Weighted, y::Weighted; cut=MINWEIGHT)
     keep = weights(x) .> cut
-    x.array = x.array[:,keep]
+    x.array = x.array[..,keep]
     x.weights = x.weights[keep]
-    y.array = y.array[:,keep]
+    y.array = y.array[..,keep]
     y.weights = y.weights[keep]
     x,y
 end
@@ -180,7 +183,7 @@ end
 Log all entries, approximately `== log.(Π)` but with nice labels etc. """
 function Base.log(Π::Weighted)
     if Π.opt.clamp==false || Π.opt.lo <0
-        warn("taking log of Weighted Array which isn't clamped to positive numbers", once=true)
+        @warn "taking log of Weighted Array which isn't clamped to positive numbers" maxlog=3
     end
     Weighted(log.(Π.array), Π.weights, addlname(Π.opt, "log-") |> unclamp)
 end
@@ -190,7 +193,7 @@ Sqrt all entries, approximately `== sqrt.(Π)` but with nice labels etc. """
 function Base.sqrt(Π::Weighted)
     hi = sqrt(Π.opt.hi)
     if Π.opt.clamp==false || Π.opt.lo <0
-        warn("taking sqrt of Weighted Array which isn't clamped to positive numbers", once=true)
+        @warn "taking sqrt of Weighted Array which isn't clamped to positive numbers"  maxlog=3
         hi = Inf
     end
     Weighted(sqrt.(Π.array), Π.weights, clamp(addlname(Π.opt, "sqrt-"),0,hi))

@@ -14,14 +14,9 @@ using Parameters
     hi::Float64 = 1.0
     aname::String = "θ"
     wname::String = "p(θ)"
-    # stat::Bool = false
-    # rows::Int = 0
     like::Bool = false
 end
 
-## I tried added boolean flags to the type. I'm not entirely sure this is a good idea re type stability, e.g. yexp() doesn't infer.
-## ClampedWeighted etc used for clamp! and normalise! methods below... and maxcol() also needed to be changed.
-# mutable struct Weighted{T1,T2,N,C,L}
 mutable struct Weighted{T1,T2}
     array::T1
     weights::T2
@@ -29,7 +24,6 @@ mutable struct Weighted{T1,T2}
 
     function Weighted(array::T1, weights::T2, opt::WeightOpt) where {T1<:AbstractArray,T2<:AbstractVector}
         size(array,ndims(array)) == length(weights) || @error "length of weights much match size of last dimension of array"
-        # new{T1, T2, opt.norm, opt.clamp, opt.like}(array, weights, opt)
         new{T1, T2}(array, weights, opt)
     end
 end
@@ -41,12 +35,6 @@ const WeightedMatrix = Weighted{<:AbstractMatrix}
 const MaybeWeightedArray = Union{AbstractArray, WeightedArray}
 const MaybeWeightedVector = Union{AbstractVector, WeightedVector}
 const MaybeWeightedMatrix = Union{AbstractMatrix, WeightedMatrix}
-
-# const NormWeighted = Weighted{<:Any, <:Any, true}
-# const UnNormWeighted = Weighted{<:Any, <:Any, false}
-#
-# const ClampedWeighted = Weighted{<:Any, <:Any, <:Any, true}
-# const UnClampedWeighted = Weighted{<:Any, <:Any, <:Any, false}
 
 const AbsVec = AbstractVector
 const AbsMat = AbstractMatrix
@@ -122,17 +110,17 @@ Base.:+(x::Weighted, y::Union{AbsArray, Weighted}) = hcat(x,y)
 
 using Setfield
 
-wname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.wname), o, string(s))
-aname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, string(s))
-addname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, o.aname * string(s))
-addlname(o::WeightOpt, s::Union{String,Symbol}) = set(@lens(_.aname), o, string(s) * o.aname)
+wname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.wname), string(s))
+aname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s))
+addname(o::WeightOpt, s::Union{String,Symbol})  = set(o, @lens(_.aname), o.aname * string(s))
+addlname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s) * o.aname)
 
 function LinearAlgebra.rmul!(x::Weighted, λ::Number)
     rmul!(x.array, λ)
     if x.opt.clamp
         o = x.opt
-        o = set(@lens(_.lo), o, λ * o.lo)
-        o = set(@lens(_.hi), o, λ * o.hi)
+        o = set(o, @lens(_.lo), λ * o.lo)
+        o = set(o, @lens(_.hi), λ * o.hi)
         x.opt = o
     end
     x
@@ -285,7 +273,7 @@ function Base.show(io::IO, o::WeightOpt) ## compact, re-digestable
 end
 
 function Base.show(io::IO, m::MIME"text/plain", x::Weighted) ## full
-    ioc = IOContext(stdout, :compact => true, :limit => true)
+    ioc = IOContext(io, :compact => true, :limit => true)
 
     print(io, "Weighted ", summary(x.array))
     if x.opt.like
