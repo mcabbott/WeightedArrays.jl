@@ -56,7 +56,7 @@ function load(file::String)
 end
 
 
-writecsv(io, x::Weighted; kw...) = writedlm(io, [x.array' x.weights], ','; kw...)
+writecsv(io, x::Weighted; kw...) = writedlm(io, hcat(x.array' |> copy, x.weights), ','; kw...) ## |> copy for a Flux bug
 
 function readcsv(io, T::Type{Weighted}; kw...)
 
