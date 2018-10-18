@@ -23,7 +23,7 @@ Weighted 2×4 Array{Float64,2}, clamped 0.0 ≦ θ ≦ 1.0:
 with normalised weights p(θ), 4-element Array{Float64,1}:
  0.25  0.25  0.25  0.25
 ```
-These examples are roughtly `wrandn(3,5)` and `wrand(2,4)`, there are also sub-random `sobol(3,7)` and regular  `wgrid(2, 0:0.1:1)`. Their values are mutable, `clamp!(x)` will enforce the box constraint, and `normalise!(x)` (with an s) the weights.
+These examples are roughly `wrandn(3,5)` and `wrand(2,4)`, there are also sub-random `sobol(3,7)` and regular  `wgrid(2, 0:0.1:1)`. Their values are mutable, `clamp!(x)` will enforce the box constraint, and `normalise!(x)` (with an s) the weights.
 
 They are not subtypes of `AbstractArray`, but many functions will work. 
 For instance `x[1:2, :]` keeps only the first two rows (and the weights),
@@ -34,11 +34,12 @@ and `mapslices(f,x)` will act with `f` on columns & then restore weights.
 A few functions like `log(x)` and `tanh(x)` act element-wise but update the box constraints appropriately. 
 (Most of this will work for any N-dimensional Array, not just a Matrix. The weights then belong to the last dimension.)
 
-Plot recipies are defined: `using Plots; plot(wrandn(2,100))` will draw a scatter plot in two dimensions, with area indicating weight. 
+Plot recipes are defined: `using Plots; plot(wrandn(2,100))` will draw a scatter plot in two dimensions, with area indicating weight. 
 With more than three rows e.g. `plot(wrandn(4,50))`, it will plot the first two principal components (and attempt to scale these correctly). 
 The function `pplot(x)` saves the PCA function (see `wPCA(x)`) in a global varable, so that `pplot!(t)` can add more points on the same axes. 
 
 <img src="deps/red.png?raw=true" width="440" height="400" alt="Plot example" align="right" padding="5">
+
 ```julia
 julia> plot(wgrid(2, -5:5), m=:+)
 
