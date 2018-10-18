@@ -9,7 +9,7 @@ MultivariateStats
 Parameters
 RecipesBase
 Requires
-Setfield 0.3.0
+Setfield
 Sobol
 SpecialFunctions
 StaticArrays
