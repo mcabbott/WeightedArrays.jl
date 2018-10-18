@@ -1,5 +1,5 @@
 
-export maxcol, myround, clip, clip!, trim, trim!, MINWEIGHT, MINPROB
+export maxcol, myround, clip, clip!, trim, trim!, MINWEIGHT, MINPROB, sortcols
 
 const MINWEIGHT = 1e-10 ## trim() deletes prior points with less than this weight.
 const MINPROB = 1e-100  ## clip() sets to zero entries smaller than this.
@@ -41,7 +41,7 @@ end
 
 """    sortcols(x::WeightedMatrix)
 Sorts according to `θ₁`, i.e. the first row of `array(x)`."""
-function Base.sortcols(x::WeightedMatrix; kw...)
+function sortcols(x::WeightedMatrix; kw...)
     perm = sortperm(x.array[1,:]; kw...)
     Weighted( x.array[:,perm], x.weights[perm], x.opt)
 end
