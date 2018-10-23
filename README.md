@@ -30,7 +30,7 @@ For instance `x[1:2, :]` keeps only the first two rows (and the weights),
 `hcat(x,y)` will concatenate the weights,
 and `mapslices(f,x)` will act with `f` on columns & then restore weights. 
 `sort(x)` re-arranges columns to order by the weights, `sortcols(x)` orders by the array instead.
-`unique(x)` needs `using Pkg; pkg"add https://github.com/mcabbott/GroupSlices.jl#julia07fixes"` to work correctly.
+`unique(x)` acts on columns & collects their weights. 
 A few functions like `log(x)` and `tanh(x)` act element-wise but update the box constraints appropriately. 
 (Most of this will work for any N-dimensional Array, not just a Matrix. The weights then belong to the last dimension.)
 

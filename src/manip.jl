@@ -65,7 +65,7 @@ myround(num::Real, dig::Int) = round(num; digits=dig) |> flipzero
 
 flipzero(x::Real) = ifelse(x==-0.0, zero(x), x)
 
-using GroupSlices
+using .GroupSlices
 using EllipsisNotation
 
 uniquedoc = """
