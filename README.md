@@ -29,10 +29,11 @@ They are not subtypes of `AbstractArray`, but many functions will work.
 For instance `x[1:2, :]` keeps only the first two rows (and the weights),
 `hcat(x,y)` will concatenate the weights,
 and `mapslices(f,x)` will act with `f` on columns & then restore weights. 
-`sort(x)` re-arranges columns to order by the weights, `sortcols(x)` orders by the array instead.
-`unique(x)` acts on columns & collects their weights. 
+`sort(x)` re-arranges columns to order by the weights, `sortcols(x)` orders by the array instead, 
+`unique(x)` will accumulate the weights of identical columns. 
 A few functions like `log(x)` and `tanh(x)` act element-wise but update the box constraints appropriately. 
-(Most of this will work for any N-dimensional Array, not just a Matrix. The weights then belong to the last dimension.)
+
+Most of this will work for any N-dimensional Array, not just a Matrix. The weights then belong to the last dimension.
 
 Plot recipes are defined: `using Plots; plot(wrandn(2,100))` will draw a scatter plot in two dimensions, with area indicating weight. 
 With more than three rows e.g. `plot(wrandn(4,50))`, it will plot the first two principal components (and attempt to scale these correctly). 
@@ -41,9 +42,11 @@ The function `pplot(x)` saves the PCA function (see `wPCA(x)`) in a global varab
 <img src="deps/red.png?raw=true" width="440" height="400" alt="Plot example" align="right" padding="5">
 
 ```julia
-julia> plot(wgrid(2, -5:5), m=:+)
+julia> using Plots
 
-julia> plot!(soboln(2, 2000), m=:diamond, c=:red)
+julia> plot(wgrid(2, -5:5), m=:+) ## grid
+
+julia> plot!(soboln(2, 2000), m=:diamond, c=:red) ## subrandom normal
 ```
 
 [![Build Status](https://travis-ci.org/mcabbott/WeightedArrays.jl.svg?branch=master)](https://travis-ci.org/mcabbott/WeightedArrays.jl)
