@@ -162,7 +162,7 @@ function firstinds(ic::Vector{Int})
     n = length(id)
     ia = Array{Int}(undef,n)
     for i = 1:n
-        ia[i] = something(findfirst(isequal(id[i]), ic), 0) # findfirst(ic, id[i]) 
+        ia[i] = something(findfirst(isequal(id[i]), ic), 0) # findfirst(ic, id[i])
     end
     return ia
 end
