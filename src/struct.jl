@@ -1,7 +1,7 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, aname, wname, unclamp, 
-    normalise, normalise!, unnormalise, unnormalise!, 
+export array, weights, lastlength, aname, wname, unclamp,
+    normalise, normalise!, unnormalise, unnormalise!,
 	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
 export AbsVec, AbsMat, AbsArray
 
@@ -155,7 +155,7 @@ Base.getindex(x::Weighted, r::Colon, cc::AbsVec{Int}) = Weighted(x.array[r,cc], 
 using Lazy: @forward
 
 @forward Weighted.array  Base.size, Base.ndims, Base.eltype, Base.getindex, Base.setindex!,
-    Base.iterate, Base.lastindex, 
+    Base.iterate, Base.lastindex,
     Base.minimum, Base.maximum, Base.extrema
 
 lastlength(x) = size(x, ndims(x))
@@ -163,7 +163,7 @@ lastlength(x) = size(x, ndims(x))
 using StaticArrays
 
 svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(x.array)) ## not type-stable
-
+svecs(x::Weighted{<:Matrix{T}}, vald::Val{D}) where {T,D} = (@assert D==size(x,1); reinterpret(SVector{D,T}, vec(x.array)))
 
 ##### Standardisers
 
@@ -197,7 +197,7 @@ unclamp(o::WeightOpt) = set(o, @lens(_.clamp), false)
     normalise(x) ## with an s, NB!
     normalise!(x)
 Ensures weights are positive and sum to 1.
-On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`; 
+On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`;
 the copying (!) form sets this flag first.
 
 	unnormalise(x)

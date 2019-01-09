@@ -70,22 +70,26 @@ using EllipsisNotation
 
 uniquedoc = """
     unique!(x::Weighted)
-    unique!(x, f) = unique!(x, f(x))
+    unique!(f, x) = unique!(x, f) = unique!(x, f(x))
 Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digits,
 and after applying function `f` if given. Now works for any `ndims(x)`.
 
-    `unique`
-Non-mutating version. 
-Note BTW that both of these return `x` partially sorted, done so that among nearly co-incident points, 
+    unique(x) = unique!(copy(x))
+    unique(f, x)
+Non-mutating version.
+
+Note BTW that both of these return `x` partially sorted, done so that among nearly co-incident points,
 the position of the heaviest is kept. But the result is not sure to be completely sorted.
 """
 @doc uniquedoc
 Base.unique!(x::Weighted, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
 Base.unique!(x::Weighted, f::Function; kw...) = unique!(x, f(x); kw...)
+Base.unique!(f::Function, x::Weighted; kw...) = unique!(x, f(x); kw...) ## matching built-in order now
 
 @doc uniquedoc
 Base.unique(x::Weighted, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
 Base.unique(x::Weighted, f::Function; kw...) = unique(x, f(x); kw...)
+Base.unique(f::Function, x::Weighted; kw...) = unique(x, f(x); kw...)
 
 @inline function unique_(x::Weighted, y::Weighted=x; digits=DIGITS)
 
@@ -170,7 +174,7 @@ clip!(x::Weighted, ϵ::Real=MINPROB) = begin clip!(x.array, ϵ); x end
 """
     mapslices(f, x::Weighted)
 If no dimensions are given, then `f` acts on slices `x.array[:,...:, c]` for `c=1:lastlength(x)`.
-`x.weights` are untouched. 
+`x.weights` are untouched.
 """
 function Base.mapslices(f::Function, x::Weighted; dims=collect(1:ndims(x)-1))
     array = mapslices(f, x.array; dims=dims)

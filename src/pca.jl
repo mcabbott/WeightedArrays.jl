@@ -20,6 +20,7 @@ For example:
 julia> xx = wrandn(7,50); yy = xx[:, 1:10] |> normalise
 julia> plot(xx, sPCA); plot!(yy, rPCA)
 ```
+Now equivalent to using PCA-plot function: `pplot(xx); pplot!(yy)`. 
 """
 function wPCA(x::Union{Matrix, Weighted}, outdim::Int=2) ## from  fit{T<:AbstractFloat}(::Type{PCA}, X::DenseMatrix{T};
     d, n = size(x)

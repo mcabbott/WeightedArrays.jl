@@ -57,6 +57,9 @@ using RecipesBase
     out
 end
 
+@recipe f(x::Weighted{<:Base.ReshapedArray}; sz=1) = copy(x) ## these were otherwise not caught
+@recipe f(x::Weighted{<:Base.ReinterpretArray}; sz=1) = copy(x)
+
 # using Requires
 # @require Plots begin
 
@@ -155,6 +158,9 @@ function shadowxy(x::Vector, y::Vector, smooth=(maximum(x)-minimum(x))/100, nump
 end
 
 @recipe function f(x::Weighted, fun::Function)
+    unique!(fun(x))
+end
+@recipe function f(fun::Function, x::Weighted)
     unique!(fun(x))
 end
 
