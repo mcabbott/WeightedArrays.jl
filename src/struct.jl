@@ -2,7 +2,7 @@
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
 export array, weights, lastlength, aname, wname, unclamp,
     normalise, normalise!, unnormalise, unnormalise!,
-	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs
+	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs, CatView
 export AbsVec, AbsMat, AbsArray
 
 using Parameters
@@ -167,20 +167,28 @@ svecs(x::Weighted{<:Matrix{T}}, vald::Val{D}) where {T,D} = (@assert D==size(x,1
 
 ##### Standardisers
 
-"""
+clampdoc = """
     clamp!(x::Weighted)
-Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, then clamps `x.array` using `lo,hi` from `x.opt`.
+    clamp(x::Weighted)
+Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, 
+then clamps `x.array` using `lo,hi` from `x.opt`.
+
     clamp(x, lo, hi)
     clamp!(x, lo, hi)
 These alter the flag `x.opt.clamp` & then proceed.
 """
+@doc clampdoc 
 function Base.clamp!(x::Weighted)
     clamp!(x.weights, 0, Inf)
     x.opt.clamp && clamp!(x.array, x.opt.lo, x.opt.hi)
     x
 end
-# Base.clamp!(x::ClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); clamp!(x.array, x.opt.lo, x.opt.hi); x end
-# Base.clamp!(x::UnClampedWeighted) = begin clamp!(x.weights, 0.0, Inf); x end
+@doc clampdoc 
+function Base.clamp(x::Weighted)
+    weights = clamp.(x.weights, 0, Inf)
+    array = x.opt.clamp ? clamp.(x.array, x.opt.lo, x.opt.hi) : x.array
+    Weighted(array, weights, x.opt)
+end
 
 Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
 Base.clamp(x::Weighted, lo::Real, hi::Real) = clamp!(copy(x), lo, hi)
@@ -247,6 +255,12 @@ function flatcopy(x::Weighted, flat::AbsVec) ## AbstractVector allows ReverseDif
     Weighted(array, weights, x.opt)
 end
 
+using CatViews
+"""
+    CatView(x::Weighted)
+Gives a vector-like view of both `x.array` and `x.weights`, the last `d` components are weights.
+"""
+CatViews.CatView(x::Weighted) = CatView(x.array, x.weights)
 
 ##### Pretty
 
