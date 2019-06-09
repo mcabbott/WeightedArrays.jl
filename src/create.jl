@@ -96,7 +96,7 @@ using Distances
     pairwise2(x, y=x) = Distances.pairwise(SqEuclidean(), x, y)
 Resulting `mat[i,j]` is distance sqared from `x[:,i]` to `y[:,j]`. Implementation varies.
 """
-pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y)
+pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y, dims=2)
 pairwise2(x::Matrix) = pairwise(SqEuclidean(), x)
 
 pairwise2(x::AbsMat, y::AbsMat) = diag(x'*x) .+ diag(y'*y)' .- 2x'*y
