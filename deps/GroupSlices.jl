@@ -67,7 +67,7 @@ end
         end
 
         if any(collided)
-            nowcollided = BitArray(size(A, dim))
+            nowcollided = BitArray(undef, size(A, dim))
             while any(collided)
                 # Collect index of first row for each collided hash
                 empty!(firstrow)
