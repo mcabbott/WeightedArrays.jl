@@ -1,5 +1,5 @@
 
-export pplot, pplot!
+export pplot, pplot!, yplot, yplot!
 
 PLOTSIZE = 400
 ALPHA = 0.4
@@ -168,36 +168,73 @@ end
     rmul!(copy(x), λ)
 end
 
-# @recipe function f(m::MultiModel; sz=1)
-#     legend --> :topleft
-#     for i=1:length(m)
-#         @series begin
-#             lab --> grsafe(getname(m,i)) * " : " * string(round(totweight(m.priors[i]),3))
-#             m[i]
-#         end
-#     end
-# end
-
 using Requires
 
 function __init__()
-# function init_plot_req()
-    @require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
+@require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
+    # Am not sure whether these can easily be made into recipies.
+    # import WeightedArrays: pplot, pplot!, yplot, yplot!, rPCA, sPCA, rmul!
 
-        """
-            pplot(x::Weighted)
-            pplot!(x)
-        The first calls `sPCA`, the second calls `rPCA` to plot on the same axes.
+    """
+        pplot(x::Weighted)
+        pplot!(x)
+    The first calls `sPCA`, the second calls `rPCA` to plot on the same axes.
 
-            pplot(x, f)
-            pplot(x, λ)
-        Ditto, but first applies function `f`, or scales by `λ`.
-        """
-        pplot(x::Weighted, f::Function=identity; kw...) = Plots.plot(sPCA(unique!(f(x))); kw...)
-        pplot(x::Weighted, λ::Number; kw...) = Plots.plot(rmul!(sPCA(x),λ); kw...)
+        pplot(x, f)
+        pplot(x, λ)
+    Ditto, but first applies function `f`, or scales by `λ`.
+    """
+    pplot(x::Weighted, f::Function=identity; kw...) = Plots.plot(sPCA(unique!(f(x))); kw...)
+    pplot(x::Weighted, λ::Number; kw...) = Plots.plot(rmul!(sPCA(x),λ); kw...)
 
-        pplot!(x::Weighted, f::Function=identity; kw...) = Plots.plot!(rPCA(unique!(f(x))); kw...)
-        pplot!(x::Weighted, λ::Number; kw...) = Plots.plot!(rmul!(rPCA(x),λ); kw...)
+    pplot!(x::Weighted, f::Function=identity; kw...) = Plots.plot!(rPCA(unique!(f(x))); kw...)
+    pplot!(x::Weighted, λ::Number; kw...) = Plots.plot!(rmul!(rPCA(x),λ); kw...)
 
+    pplot(f::Function, x::Weighted; kw...) = pplot(x, f; kw...) # standard order
+    pplot!(f::Function, x::Weighted; kw...) = pplot!(x, f; kw...)
+
+
+    """
+        yplot(y, x::Weighted, t)
+
+    Time-series plotting. If `y(Π, 1:3)` is what we observe (up to noise)
+    then `yplot(y, Π, 1:3)` will plot a line for each column of `Π`, for times `range(0, tmax, length=200)` points; `length` and `tmax=3.3` are keywords.
+    Their opacity by default represents weight, unless you override with e.g. `alpha=1/20`.
+    """
+    function yplot(args...; kw...)
+        Plots.plot(xaxis = "time")#, yaxis="y")
+        yplot!(args...; kw...)
     end
-end
+
+    yplot!(prior::Weighted, times::AbstractVector; kw...) =
+        yplot!(yexp, prior, times)
+
+    function yplot!(yfun::Function, prior::Weighted, times::AbstractVector;
+            pts=200, c=:blue, m=:uptriangle, alpha=:auto, tmax=1.1*maximum(times), lab="", kw...)
+        if alpha == :auto
+            alpha = sqrt.(prior.weights ./ maximum(prior.weights)) |> transpose
+        end
+        ptimes = range(0, tmax, length=pts)
+        res = yfun(prior, ptimes).array
+
+        # case of y_react etc, when y(θ) should be a matrix
+        if :syms in fieldnames(typeof(yfun))
+            dout, k = size(res)
+            tensor = reshape(res, length(yfun.syms), :,k)
+            # alpha = alpha ./ 2
+            for (i,s) in enumerate(yfun.syms)
+                Plots.plot!(0:0, 0:0, lab=lab * string(s), c=i, alpha=1, kw...)
+                Plots.plot!(ptimes, tensor[i, :, :], lab="", c=i, alpha=alpha, kw...)
+            end
+
+        # simple yexp etc.
+        else
+            Plots.plot!(0:0, 0:0, lab=lab, c=c, alpha=1, kw...)
+            Plots.plot!(ptimes, res[:,2:end], lab="", c=c, alpha=alpha, kw...)
+        end
+
+        Plots.scatter!(times, zero(times), c=:grey, m=m, lab="")
+    end
+
+end # @require
+end #__init__
