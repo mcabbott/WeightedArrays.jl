@@ -179,8 +179,33 @@ If no dimensions are given, then `f` acts on slices `x.array[:,...:, c]` for `c=
 function Base.mapslices(f::Function, x::Weighted; dims=collect(1:ndims(x)-1))
     array = mapslices(f, x.array; dims=dims)
     @assert size(array, ndims(array)) == length(x.weights) "mapslices must preserve lastlength(array)"
-    Weighted(array, x.weights, aname(x.opt, "map"))
+    Weighted(array, x.weights, addlname(Π.opt, "map-") |> unclamp)
 end
+
+using SliceMap
+
+slicedoc = """
+    MapCols(f, x::Weighted)
+    MapCols{d}(f, x::Weighted)
+    ThreadMapCols{d}(f, x::Weighted)
+Like `mapslices(f,x)` but for SVector column slices, each of length `d`.
+`x.weights` are untouched.
+"""
+@doc slicedoc
+SliceMap.MapCols(f::Function, M::WeightedMatrix, args...)  =
+    MapCols{size(M,1)}(f, M, args...)
+
+SliceMap.MapCols{d}(f::Function, M::WeightedMatrix, args...) where {d} =
+    Weighted(MapCols{d}(f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+
+@doc slicedoc
+SliceMap.ThreadMapCols{d}(f::Function, M::WeightedMatrix, args...) where {d} =
+    Weighted(ThreadMapCols{d}(f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+
+@doc slicedoc
+SliceMap.mapcols(f::Function, M::WeightedMatrix, args...) =
+    Weighted(mapcols(map, f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+
 
 
 """    log(Π)
