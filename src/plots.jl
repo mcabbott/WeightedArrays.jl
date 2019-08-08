@@ -198,16 +198,13 @@ function __init__()
         yplot(y, x::Weighted, t)
 
     Time-series plotting. If `y(Π, 1:3)` is what we observe (up to noise)
-    then `yplot(y, Π, 1:3)` will plot a line for each column of `Π`, for times `range(0, tmax, length=200)` points; `length` and `tmax=3.3` are keywords.
+    then `yplot(y, Π, 1:3)` will plot a line for each column of `Π`, for times `range(0, tmax, length=200)` points; `pts=200` and `tmax=3.3` are keywords.
     Their opacity by default represents weight, unless you override with e.g. `alpha=1/20`.
     """
     function yplot(args...; kw...)
         Plots.plot(xaxis = "time")#, yaxis="y")
         yplot!(args...; kw...)
     end
-
-    yplot!(prior::Weighted, times::AbstractVector; kw...) =
-        yplot!(yexp, prior, times)
 
     function yplot!(yfun::Function, prior::Weighted, times::AbstractVector;
             pts=200, c=:blue, m=:uptriangle, alpha=:auto, tmax=1.1*maximum(times), lab="", kw...)
@@ -230,7 +227,7 @@ function __init__()
         # simple yexp etc.
         else
             Plots.plot!(0:0, 0:0, lab=lab, c=c, alpha=1, kw...)
-            Plots.plot!(ptimes, res[:,2:end], lab="", c=c, alpha=alpha, kw...)
+            Plots.plot!(ptimes, res, lab="", c=c, alpha=alpha, kw...)
         end
 
         Plots.scatter!(times, zero(times), c=:grey, m=m, lab="")
