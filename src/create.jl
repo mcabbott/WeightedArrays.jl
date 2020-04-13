@@ -11,7 +11,7 @@ Default is now `k=1`, making a one-column matrix.
 
     wrandn(d, k) = π .* Weighted(randn(d, k))
 Normally distributed `d`-vectors, of mean zero and std. dev. `scale=π` by default.
-Keyword `max=10` clamps absolute values to be less than this. 
+Keyword `max=10` clamps absolute values to be less than this.
 
     wrandnp(d, k)
 Absolute value of normally distributed...
@@ -105,14 +105,3 @@ function pairwise2(x::AbsMat) # = diag(x'*x) .+ diag(x'*x)' .- 2x'*x
     vec = diag(mat)
     vec .+ vec' .- 2 .* mat
 end
-
-# using Requires
-#
-# function init_create_req()
-#     @require Distances = "???" begin
-#
-# 	pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y)
-# 	pairwise2(x::Matrix) = pairwise(SqEuclidean(), x)
-#
-# 	end # @require
-# end

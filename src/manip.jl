@@ -68,24 +68,15 @@ flipzero(x::Real) = ifelse(x==-0.0, zero(x), x)
 using GroupSlices
 using EllipsisNotation
 
-uniquedoc = """
-    unique!(x::Weighted)
-    unique!(f, x) = unique!(x, f) = unique!(x, f(x))
-Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digits,
-and after applying function `f` if given. Now works for any `ndims(x)`.
-
+"""
     unique(x) = unique!(copy(x))
     unique(f, x)
-Non-mutating version.
+Removes duplicate points while combining their weights. Decided up to `digits=$DIGITS` digits,
+and after applying function `f` if given. Now works for any `ndims(x)`.
 
 Note BTW that both of these return `x` partially sorted, done so that among nearly co-incident points,
 the position of the heaviest is kept. But the result is not sure to be completely sorted.
 """
-@doc uniquedoc
-Base.unique!(x::Weighted, y::Weighted=x; digits=DIGITS) = begin x.array, x.weights = unique_(x,y;digits=digits); x end
-Base.unique!(x::Weighted, f::Function; kw...) = unique!(x, f(x); kw...)
-Base.unique!(f::Function, x::Weighted; kw...) = unique!(x, f(x); kw...) ## matching built-in order now
-
 @doc uniquedoc
 Base.unique(x::Weighted, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
 Base.unique(x::Weighted, f::Function; kw...) = unique(x, f(x); kw...)
@@ -123,19 +114,12 @@ end
 
 """
     trim(x::Weighted)
-    trim!(x::Weighted)
 Removes points with weight less than cutoff `cut=$MINWEIGHT`, either copying or mutating.
 
-    trim!(Π::Weighted, L::Weighted)
-Removes the same columns from both, using the first one's weights. Mutates both arguments! Returns tuple `(Π,L)`.
+    trim(Π::Weighted, L::Weighted)
+Removes the same columns from both, using the first one's weights. Returns tuple `(Π,L)`.
 """
-trim(x::AbstractArray) = x
-trim!(x::AbstractArray) = x
-
 trim(x::Weighted; kw...) = Weighted(trim_(x; kw...)..., x.opt)
-
-@doc @doc(trim)
-trim!(x::Weighted; kw...) = begin x.array, x.weights = trim_(x; kw...); x end
 
 @inline function trim_(x::Weighted; cut=MINWEIGHT)
     keep = weights(x) .> cut
@@ -145,36 +129,19 @@ trim!(x::Weighted; kw...) = begin x.array, x.weights = trim_(x; kw...); x end
     x.array[.., keep], x.weights[keep] ## .. is EllipsisNotation
 end
 
-function trim!(x::Weighted, y::Weighted; cut=MINWEIGHT)
+function trim(x::Weighted, y::Weighted; cut=MINWEIGHT)
     keep = weights(x) .> cut
-    x.array = x.array[..,keep]
-    x.weights = x.weights[keep]
-    y.array = y.array[..,keep]
-    y.weights = y.weights[keep]
-    x,y
+    x_array = x.array[..,keep]
+    x_weights = x.weights[keep]
+    y_array = y.array[..,keep]
+    y_weights = y.weights[keep]
+    Weighted(x_array, x_weights, x.opt), Weighted(y_array, y_weights, y.opt)
 end
-
-"""
-    clip(x, ϵ=$MINPROB)
-    clip!(x)
-Sets to zero all entries `abs(x[i]) < ϵ`. When `x::Weighted` this acts on `x.array` only; see also `trim()`.
-"""
-clip(x::Real, ϵ::Real=MINPROB) = ifelse(abs(x)<ϵ, zero(x), x)
-
-@doc @doc(clip)
-function clip!(x::Array, ϵ::Real=MINPROB)
-    for i in eachindex(x)
-        x[i] = clip(x[i], ϵ)
-    end
-end
-
-clip(x::Weighted, ϵ::Real=MINPROB) = clip.(x, ϵ)
-clip!(x::Weighted, ϵ::Real=MINPROB) = begin clip!(x.array, ϵ); x end
 
 """
     mapslices(f, x::Weighted)
 If no dimensions are given, then `f` acts on slices `x.array[:,...:, c]` for `c=1:lastlength(x)`.
-`x.weights` are untouched.
+`x.weights` are untouched. But you should use `mapcols` really.
 """
 function Base.mapslices(f::Function, x::Weighted; dims=collect(1:ndims(x)-1))
     array = mapslices(f, x.array; dims=dims)
@@ -209,7 +176,8 @@ SliceMap.mapcols(f::Function, M::WeightedMatrix, args...) =
 
 
 """    log(Π)
-Log all entries, approximately `== log.(Π)` but with nice labels etc. """
+Log all entries, approximately `== log.(Π)` but with nice labels etc.
+"""
 function Base.log(Π::Weighted)
     if Π.opt.clamp==false || Π.opt.lo <0
         @warn "taking log of Weighted Array which isn't clamped to positive numbers" maxlog=3
@@ -218,7 +186,8 @@ function Base.log(Π::Weighted)
 end
 
 """    sqrt(Π)
-Sqrt all entries, approximately `== sqrt.(Π)` but with nice labels etc. """
+Sqrt all entries, approximately `== sqrt.(Π)` but with nice labels etc.
+"""
 function Base.sqrt(Π::Weighted)
     hi = sqrt(Π.opt.hi)
     if Π.opt.clamp==false || Π.opt.lo <0
@@ -229,10 +198,12 @@ function Base.sqrt(Π::Weighted)
 end
 
 """    tanh(Π)
-Compactifies all entries to [-1,1], approximately `== tanh.(Π)` but with nice labels etc. """
+Compactifies all entries to [-1,1], approximately `== tanh.(Π)` but with nice labels etc.
+"""
 Base.tanh(Π::Weighted) = Weighted(tanh.(Π.array), Π.weights, clamp(addlname(Π.opt, "tanh-"),-1,1) )
 
 """    sigmoid(Π)
-Compactifies all entries to [0,1], approximately `== sigmoid.(Π)` but with nice labels etc. """
+Compactifies all entries to [0,1], approximately `== sigmoid.(Π)` but with nice labels etc.
+"""
 sigmoid(x::Number) = 1 / (1 + exp(-x))
 sigmoid(Π::Weighted) = Weighted(sigmoid.(Π.array), Π.weights, clamp(addlname(Π.opt, "sigmoid-"),0,1))

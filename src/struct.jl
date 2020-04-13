@@ -17,7 +17,7 @@ using Parameters
     like::Bool = false
 end
 
-mutable struct Weighted{T1,T2}
+struct Weighted{T1,T2}
     array::T1
     weights::T2
     opt::WeightOpt
@@ -170,27 +170,26 @@ svecs(x::Weighted{<:Matrix{T}}, vald::Val{D}) where {T,D} = (@assert D==size(x,1
 clampdoc = """
     clamp!(x::Weighted)
     clamp(x::Weighted)
-Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`, 
+Always clamps weights to be positive, and if flag `clamp=true` is set in `x.opt`,
 then clamps `x.array` using `lo,hi` from `x.opt`.
 
     clamp(x, lo, hi)
-    clamp!(x, lo, hi)
 These alter the flag `x.opt.clamp` & then proceed.
 """
-@doc clampdoc 
+@doc clampdoc
 function Base.clamp!(x::Weighted)
     clamp!(x.weights, 0, Inf)
     x.opt.clamp && clamp!(x.array, x.opt.lo, x.opt.hi)
     x
 end
-@doc clampdoc 
+@doc clampdoc
 function Base.clamp(x::Weighted)
     weights = clamp.(x.weights, 0, Inf)
-    array = x.opt.clamp ? clamp.(x.array, x.opt.lo, x.opt.hi) : x.array
+    array = x.opt.clamp ? clamp.(x.array, x.opt.lo, x.opt.hi) : copy(x.array)
     Weighted(array, weights, x.opt)
 end
 
-Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
+# Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
 Base.clamp(x::Weighted, lo::Real, hi::Real) = clamp!(copy(x), lo, hi)
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
@@ -209,14 +208,12 @@ On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`;
 the copying (!) form sets this flag first.
 
 	unnormalise(x)
-	unnormalise!(x)
 Just alters the flag `x.opt.norm`.
 """
 normalise(x::AbsVec) = begin itot = 1/sum(positive,x); itot .* clamp.(x, 0,Inf) end
 @doc @doc(normalise)
 normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
-# normalise!(x::NormWeighted) = begin normalise!(x.weights); x end
-# normalise!(x::UnNormWeighted) = x
+
 normalise!(x::Weighted) = begin x.opt.norm && normalise!(x.weights); x end
 
 normalise(o::WeightOpt) = set(o, @lens(_.norm), true)
@@ -225,7 +222,6 @@ unnormalise(o::WeightOpt) = set(o, @lens(_.norm), false)
 normalise(x::Weighted) = Weighted(copy(x.array), normalise(x.weights), normalise(x.opt))
 
 unnormalise(x::Weighted) =  Weighted(copy(x.array), copy(x.weights), unnormalise(x.opt))
-unnormalise!(x::Weighted) =  begin x.opt = unnormalise(x.opt); x end
 
 ##### Flatten
 
@@ -239,17 +235,17 @@ Copies numbers from `v = flatten(x)` back into `x`.
     flatcopy(x, v)
 Uses only `size(x)` to know what shape `::Weighted` to make out of `v` (and `x.opt` for details).
 """
-flatten(x::Weighted) = vcat(reshape(x.array,:), reshape(x.weights,:)) ## does copy
+flatten(x::Weighted) = vcat(vec(x.array), copy(x.weights))
 
 @doc @doc(flatten)
-function flatcopy!(x::Weighted, flat::Vector{<:Number})
-    x.array[:] .= flat[1:length(x.array)]
-    x.weights[:] .= flat[end-length(x.weights)+1:end]
+function flatcopy!(x::Weighted, flat::AbsVec{<:Number})
+    x.array[:] .= @view flat[1:length(x.array)]
+    x.weights[:] .= @view flat[end-length(x.weights)+1:end]
     x
 end
 
 @doc @doc(flatten)
-function flatcopy(x::Weighted, flat::AbsVec) ## AbstractVector allows ReverseDiff.TrackedArray
+function flatcopy(x::Weighted, flat::AbsVec)
     array = reshape(flat[1:length(x.array)], size(x))
     weights = flat[end-length(x.weights)+1:end]
     Weighted(array, weights, x.opt)
