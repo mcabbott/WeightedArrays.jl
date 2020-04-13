@@ -1,7 +1,5 @@
 module WeightedArrays
 
-include("../deps/GroupSlices.jl")
-
 include("struct.jl")
 
 include("create.jl")
