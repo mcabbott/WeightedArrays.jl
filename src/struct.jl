@@ -1,13 +1,11 @@
 
 export Weighted, WeightedMatrix, ClampedWeighted, UnClampedWeighted, WeightOpt
-export array, weights, lastlength, aname, wname, unclamp,
+export array, weights, trace, lastlength, aname, wname, unclamp,
     normalise, normalise!, unnormalise, unnormalise!,
 	totweight, wcopy, wcopy!, wglue, flatten, flatcopy, flatcopy!, svecs, CatView
 export AbsVec, AbsMat, AbsArray
 
-using Parameters
-
-@with_kw_noshow struct WeightOpt
+Base.@kwdef struct WeightOpt
     norm::Bool = true
     clamp::Bool = false
     lo::Float64 = 0.0
@@ -15,6 +13,7 @@ using Parameters
     aname::String = "θ"
     wname::String = "p(θ)"
     like::Bool = false
+    trace = Float64[]
 end
 
 struct Weighted{T1,T2}
@@ -23,7 +22,7 @@ struct Weighted{T1,T2}
     opt::WeightOpt
 
     function Weighted(array::T1, weights::T2, opt::WeightOpt) where {T1<:AbstractArray,T2<:AbstractVector}
-        size(array,ndims(array)) == length(weights) || @error "length of weights much match size of last dimension of array"
+        size(array,ndims(array)) == length(weights) || error("length of weights much match size of last dimension of array")
         new{T1, T2}(array, weights, opt)
     end
 end
@@ -47,13 +46,25 @@ using LinearAlgebra
 
 """
     x = Weighted(array, weights)
-Created a Weighted Array, with given weights associated to the last dimension of array, e.g. to columns of a matrix.
-Keyword `norm=true` specifies that `weights(x)` sum to 1 always; this is enforced on construction.
-Calling `normalise!(x)` will re-enforce this, after scaling `2x` or `hcat()`-ing `x + y` or mutating.
+
+Created a Weighted Array, with given weights associated to the last dimension of array,
+e.g. to columns of a matrix.
+
+Keyword `norm=true` specifies that `weights(x)` sum to 1 always;
+this is enforced on construction. Calling `normalise!(x)` will re-enforce this,
+e.g. after scaling `2x` or `hcat()`-ing `x + y` or mutating.
 
     x = Weighted(array, weights, lo, hi)
-Here every `θ ∈ array` is constrained `lo ≦ θ ≦ hi`, the same for all dimensions. (Weights are similarly `0 ≦ λ < ∞`.)
-Calling `clamp!(x)` will re-enforce these box constraints, for instance after mutating `x[1,2] *= 3` or on `y = x .+ 0.4`.
+
+Here every `θ ∈ array` is constrained `lo ≦ θ ≦ hi`, the same for all dimensions.
+(Weights are always `0 ≦ λ < ∞`.)
+
+Calling `clamp!(x)` will re-enforce these box constraints,
+for instance after mutating `x[1,2] *= 3`.
+
+    x = Weighted(array, weights, opt)
+
+This constructor with `opt::WeightOpt` doesn't check or clamp anything.
 """
 function Weighted(array::AbsArray, vector::AbsVec = ones(lastlength(array)); norm=true)
     weights = clamp.(vector,0,Inf)
@@ -77,6 +88,7 @@ WeightedMatrix(x::AbsVec, rest... ; kw...) = Weighted(reshape(x,:,1), rest...; k
 """
     hcat(x::WeightedMatrix, y, z...)
     x + y
+
 These will `hcat` the arrays, and `vcat` the weights.
 """
 function Base.hcat(x::Weighted, zz::Vararg{Union{Weighted, AbstractArray}})
@@ -95,36 +107,50 @@ sureweights(x) = begin n = lastlength(x); ones(n) ./ n end
 
 Base.:+(x::Weighted, y::Union{AbsArray, Weighted}) = hcat(x,y)
 
-# """
-#     λ*Π
-# For `Π::Weighted` this will scale `Π.weights` by `λ`.
-# """
-# Base.:*(λ::Number, x::Weighted) = Weighted(x.array, λ .* x.weights, x.opt)
-# Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
-# """
-#     λ*Π
-# For `Π::Weighted` this will scale `Π.array` by `λ`. NB this is the OPPOSITE of what it did in 0.6, sorry.
-# """
-# Base.:*(x::Weighted, λ::Number) = x * λ
-# Base.:*(x::Weighted, λ::Number) = rmul!(copy(x),λ)
+"""
+    λ * Π
+
+For `Π::Weighted` this will scale `Π.weights` by `λ`.
+Allows `0.7*Π1 + 0.3*Π2` since `+` means `hcat`.
+Does not affect whether it is normalised.
+
+    λ .* Π
+
+This instead scales `Π.array` instead,
+and adjusts box constraints if applicable.
+"""
+Base.:*(λ::Number, x::Weighted) = Weighted(x.array, λ .* x.weights, x.opt)
+Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
+
+Base.broadcasted(::typeof(*), λ::Number, x::Weighted) = _scaleby(x, λ)
+Base.broadcasted(::typeof(*), x::Weighted, λ::Number) = _scaleby(x, λ)
 
 using Setfield
+
+function _scaleby(x, λ)
+    o = x.opt
+    if x.opt.clamp
+        o = set(o, @lens(_.lo), λ * o.lo)
+        o = set(o, @lens(_.hi), λ * o.hi)
+    end
+    Weighted(λ .* x.array, x.weights, o)
+end
+
+# function LinearAlgebra.rmul!(x::Weighted, λ::Number)
+#     rmul!(x.array, λ)
+#     if x.opt.clamp
+#         o = x.opt
+#         o = set(o, @lens(_.lo), λ * o.lo)
+#         o = set(o, @lens(_.hi), λ * o.hi)
+#         x.opt = o
+#     end
+#     x
+# end
 
 wname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.wname), string(s))
 aname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s))
 addname(o::WeightOpt, s::Union{String,Symbol})  = set(o, @lens(_.aname), o.aname * string(s))
 addlname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s) * o.aname)
-
-function LinearAlgebra.rmul!(x::Weighted, λ::Number)
-    rmul!(x.array, λ)
-    if x.opt.clamp
-        o = x.opt
-        o = set(o, @lens(_.lo), λ * o.lo)
-        o = set(o, @lens(_.hi), λ * o.hi)
-        x.opt = o
-    end
-    x
-end
 
 ##### Copying
 
@@ -139,10 +165,15 @@ wcopy(x::Weighted, vec::AbsVec) = Weighted(x.array, clamp.(vec,0,Inf), x.opt) ##
 
 array(x::Weighted) = x.array
 array(x) = x
+Base.parent(x::Weighted) = x.array
 
-# weights(x::NormWeighted) = x.weights .* (1/sum(x.weights))
-# weights(x::UnNormWeighted) = x.weights
-weights(x::Weighted) = x.opt.norm ? x.weights .* (1/sum(x.weights)) : x.weights ## sum(positive, x.weights) gives exotic problems
+"""
+    weights(x::Weighted)
+If `x` is supposed to have normalised weights, this returns `normalise(x.weights)`
+which also clamps them to be positive.
+"""
+# weights(x::Weighted) = x.opt.norm ? x.weights .* (1/sum(x.weights)) : x.weights ## sum(positive, x.weights) gives exotic problems
+weights(x::Weighted) = x.opt.norm ? normalise(x.weights) : x.weights
 
 positive(x) = max(x,zero(x))
 
@@ -164,6 +195,8 @@ using StaticArrays
 
 svecs(x::Weighted{<:Matrix{T}}) where T = reinterpret(SVector{size(x,1),T}, vec(x.array)) ## not type-stable
 svecs(x::Weighted{<:Matrix{T}}, vald::Val{D}) where {T,D} = (@assert D==size(x,1); reinterpret(SVector{D,T}, vec(x.array)))
+
+trace(x::Weighted) = x.opt.trace
 
 ##### Standardisers
 
@@ -201,7 +234,7 @@ end
 unclamp(o::WeightOpt) = set(o, @lens(_.clamp), false)
 
 """
-    normalise(x) ## with an s, NB!
+    normalise(x) # with an s, NB!
     normalise!(x)
 Ensures weights are positive and sum to 1.
 On `x::Weighted`... the mutating form checks whether `norm=true` in `x.opt`;
@@ -254,7 +287,7 @@ end
 using CatViews
 """
     CatView(x::Weighted)
-Gives a vector-like view of both `x.array` and `x.weights`, the last `d` components are weights.
+Gives a vector-like view of both `x.array` and `x.weights`, the last `k` components are weights.
 """
 CatViews.CatView(x::Weighted) = CatView(x.array, x.weights)
 

@@ -77,7 +77,6 @@ and after applying function `f` if given. Now works for any `ndims(x)`.
 Note BTW that both of these return `x` partially sorted, done so that among nearly co-incident points,
 the position of the heaviest is kept. But the result is not sure to be completely sorted.
 """
-@doc uniquedoc
 Base.unique(x::Weighted, y::Weighted=x; digits=DIGITS) = Weighted(unique_(x,y;digits=digits)..., x.opt)
 Base.unique(x::Weighted, f::Function; kw...) = unique(x, f(x); kw...)
 Base.unique(f::Function, x::Weighted; kw...) = unique(x, f(x); kw...)
@@ -146,7 +145,7 @@ If no dimensions are given, then `f` acts on slices `x.array[:,...:, c]` for `c=
 function Base.mapslices(f::Function, x::Weighted; dims=collect(1:ndims(x)-1))
     array = mapslices(f, x.array; dims=dims)
     @assert size(array, ndims(array)) == length(x.weights) "mapslices must preserve lastlength(array)"
-    Weighted(array, x.weights, addlname(Π.opt, "map-") |> unclamp)
+    Weighted(array, x.weights, addlname(x.opt, "map-") |> unclamp)
 end
 
 using SliceMap
@@ -158,20 +157,21 @@ slicedoc = """
 Like `mapslices(f,x)` but for SVector column slices, each of length `d`.
 `x.weights` are untouched.
 """
+
 @doc slicedoc
-SliceMap.MapCols(f::Function, M::WeightedMatrix, args...)  =
+SliceMap.MapCols(f::Function, M::WeightedMatrix, args...) =
     MapCols{size(M,1)}(f, M, args...)
 
 SliceMap.MapCols{d}(f::Function, M::WeightedMatrix, args...) where {d} =
-    Weighted(MapCols{d}(f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+    Weighted(MapCols{d}(f, M.array, args...), M.weights, addlname(M.opt, "map-") |> unclamp)
 
 @doc slicedoc
 SliceMap.ThreadMapCols{d}(f::Function, M::WeightedMatrix, args...) where {d} =
-    Weighted(ThreadMapCols{d}(f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+    Weighted(ThreadMapCols{d}(f, M.array, args...), M.weights, addlname(M.opt, "map-") |> unclamp)
 
 @doc slicedoc
 SliceMap.mapcols(f::Function, M::WeightedMatrix, args...) =
-    Weighted(mapcols(map, f, M.array, args...), M.weights, addlname(Π.opt, "map-") |> unclamp)
+    Weighted(mapcols(f, M.array, args...), M.weights, addlname(M.opt, "map-") |> unclamp)
 
 
 

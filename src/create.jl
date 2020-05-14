@@ -5,27 +5,30 @@ export wrand, wrandn, wrandnp, wsobol, sobol, soboln, sobolnp, wgrid, xgrid, nea
 
 """
     wrand(d, k) = Weighted(rand(d, k))
+
 Uniformly distributed vectors in `[0,1]^d`, as columns of a `Weighted{Matrix}`
 which knows to `clamp` them to this box. Keyword `weights=true` gives weights ∝ `1 .+ rand(k)` rather than constant.
 Default is now `k=1`, making a one-column matrix.
 
     wrandn(d, k) = π .* Weighted(randn(d, k))
-Normally distributed `d`-vectors, of mean zero and std. dev. `scale=π` by default.
+
+Normally distributed `d`-vectors, of mean zero and std. dev. `scale=1` by default.
 Keyword `max=10` clamps absolute values to be less than this.
 
     wrandnp(d, k)
+
 Absolute value of normally distributed...
 """
 wrand(d::Int, k::Int=1; weights=true) = Weighted( rand(d,k), weights ? 1 .+ rand(k) : ones(k) ,0,1)
 
 @doc @doc(wrand)
-function wrandn(d::Int, k::Int=1; scale=π, weights=true, max=Inf)
+function wrandn(d::Int, k::Int=1; scale=1, weights=true, max=Inf)
     out = Weighted( scale .* randn(d,k), weights ? 1 .+ rand(k) : ones(k) )
     max==Inf ? out : clamp!(out, -max, max)
 end
 
 @doc @doc(wrand)
-function wrandnp(d::Int, k::Int=1; scale=π, weights=true, max=Inf)
+function wrandnp(d::Int, k::Int=1; scale=1, weights=true, max=Inf)
     out = Weighted( abs.(scale .* randn(d,k)), weights ? 1 .+ rand(k) : ones(k), 0,Inf)
     max==Inf ? out : clamp!(out, 0, max)
 end
@@ -34,8 +37,11 @@ end
 
 import Sobol
 
-"""    sobol(d, k)
-First `k` entries from the `d`-dimensional Sobol sequence, as columns of a `Weighted{Matrix}`. """
+"""
+    sobol(d, k)
+
+First `k` entries from the `d`-dimensional Sobol sequence, as columns of a `Weighted{Matrix}`.
+"""
 function sobol(d::Int, k::Int=1)
     s = Sobol.SobolSeq(d)
     cols = hcat([Sobol.next!(s) for i=1:k]...)
@@ -44,10 +50,13 @@ end
 
 using SpecialFunctions: erfinv
 
-"""    soboln(d, k)
-Normally distributed `d`-vectors, of mean zero and std. dev. π, generated from Sobol sequence,
-as columns of a `Weighted{Matrix}`. """
-function soboln(d::Int, k::Int=1; scale=π)
+"""
+    soboln(d, k)
+
+Normally distributed `d`-vectors, of mean zero and std. dev. 1, generated from Sobol sequence,
+as columns of a `Weighted{Matrix}`.
+"""
+function soboln(d::Int, k::Int=1; scale=1)
     boxed = sobol(d,k)
     Weighted( scale .* erfinv.( -1 .+ 2 .*array(boxed)), boxed.weights)
 end
@@ -65,8 +74,10 @@ wgrid(d::Int, range::AbstractRange) = Weighted(xgrid(d,range), extrema(range)...
 
 ##### not Weighted
 
-"""    xgrid(d, 0:0.1:5)
-Gives the matrix whose colums are `d`-vectors, forming a grid of the given range in all dimensions. """
+"""
+    xgrid(d, 0:0.1:5)
+Gives the matrix whose colums are `d`-vectors, forming a grid of the given range in all dimensions.
+"""
 xgrid(d::Int, n::Int) = xgrid(d, 0:n)
 
 function (xgrid(d::Int, range::AbstractRange{T}; big=false)::Matrix{T}) where T

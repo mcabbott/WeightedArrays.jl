@@ -16,17 +16,17 @@ using RecipesBase
     else
 
         legend --> :false
-        lab    --> " "
+        label  --> " "
         if x.opt.clamp
             extr = [x.opt.lo - 0.05, x.opt.hi + 0.05]
-            xlim --> extr
-            ylim --> extr
+            xlims --> extr
+            ylims --> extr
             # zlim --> [x.opt.lo, x.opt.hi] ## leaves too much space, in GR
         end
 
         if endswith(x.opt.aname,"PC")
             size   --> (1.5*PLOTSIZE, PLOTSIZE)
-            ylim   --> pcaylim(x, 1.5)
+            ylims   --> pcaylim(x, 1.5)
         elseif size(x,1)==2
             size   --> (1.1*PLOTSIZE, PLOTSIZE)
         elseif size(x,1)==3
@@ -113,11 +113,11 @@ end
     size   --> (1.2*PLOTSIZE, 0.8*PLOTSIZE)
     legend --> :false
     if x.opt.clamp && x.opt.hi < Inf
-        xlim --> [x.opt.lo - 0.05, x.opt.hi + 0.05]
+        xlims --> [x.opt.lo - 0.05, x.opt.hi + 0.05]
     end
     xaxis --> grsafe(x.opt.aname) #"\\theta"
     yaxis --> grsafe(x.opt.wname)
-    ylim  --> [0, 1.4*maximum(weights(x)) ]
+    ylims  --> [0, 1.4*maximum(weights(x)) ]
     yticks --> [0, round(maximum(weights(x)),digits=2)]
 
     if shadow != "only"
@@ -133,10 +133,10 @@ end
     if shadow != "no"
         @series begin ## plot the shadow
             seriestype := :line
-            lab   := ""
+            label := ""
             fill  := 0
-            color := :black
-            alpha := 0.5*ALPHA
+            seriescolor := :black
+            seriesalpha := 0.5*ALPHA
 
             shadowxy(array(x), weights(x))
         end
@@ -158,18 +158,19 @@ function shadowxy(x::Vector, y::Vector, smooth=(maximum(x)-minimum(x))/100, nump
 end
 
 @recipe function f(x::Weighted, fun::Function)
-    unique!(fun(x))
+    unique(fun(x))
 end
 @recipe function f(fun::Function, x::Weighted)
-    unique!(fun(x))
+    unique(fun(x))
 end
 
 @recipe function f(x::Weighted, λ::Number)
-    rmul!(copy(x), λ)
+    λ .* x
 end
 
 using Requires
 
+#=
 function __init__()
 @require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
     # Am not sure whether these can easily be made into recipies.
@@ -235,3 +236,4 @@ function __init__()
 
 end # @require
 end #__init__
+=#
