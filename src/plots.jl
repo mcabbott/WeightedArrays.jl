@@ -1,6 +1,4 @@
 
-export pplot, pplot!, yplot, yplot!
-
 PLOTSIZE = 400
 ALPHA = 0.4
 

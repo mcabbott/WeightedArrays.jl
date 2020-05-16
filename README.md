@@ -48,10 +48,3 @@ julia> plot!(soboln(2, 2000), m=:diamond, c=:red)
 With more than three rows e.g. `plot(wrandn(4,50))`, it will plot the first two principal components (and attempt to scale these correctly).
 There is a function `pplot(x)` which saves the PCA function (see help for `wPCA(x)`) in a global variable, so that `pplot!(t)` can add more points on the same axes.
 
-The package is now registered, so can be installed by typing `]` and:
-
-```julia
-pkg> add WeightedArrays
-
-julia> using WeightedArrays
-```
