@@ -136,17 +136,6 @@ function _scaleby(x, λ)
     Weighted(λ .* x.array, x.weights, o)
 end
 
-# function LinearAlgebra.rmul!(x::Weighted, λ::Number)
-#     rmul!(x.array, λ)
-#     if x.opt.clamp
-#         o = x.opt
-#         o = set(o, @lens(_.lo), λ * o.lo)
-#         o = set(o, @lens(_.hi), λ * o.hi)
-#         x.opt = o
-#     end
-#     x
-# end
-
 wname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.wname), string(s))
 aname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s))
 addname(o::WeightOpt, s::Union{String,Symbol})  = set(o, @lens(_.aname), o.aname * string(s))
@@ -157,9 +146,13 @@ addlname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(
 Base.copy(x::Weighted) = Weighted(Base.copy(x.array), Base.copy(x.weights), x.opt)
 Base.copyto!(x::Weighted, y::Weighted) = begin copyto!(x.array, y.array); copyto!(x.weights, y.weights); x end
 
-wcopy!(x::Weighted, vec::AbsVec) = (x.weights = clamp.(vec,0,Inf); x)
-wcopy(x::Weighted, vec::AbsVec) = Weighted(x.array, clamp.(vec,0,Inf), x.opt) ## only weights are copied!
+wcopy!(x::Weighted, vec::AbsVec) = (x.weights .= clamp.(vec,0,Inf); x)
+wcopy(x::Weighted, vec::AbsVec) = Weighted(x.array, clamp.(vec,0,Inf), x.opt) # only weights are copied!
 
+##### Comparisons
+
+Base.isapprox(x::Weighted, y::Weighted; kw...) =
+    isapprox(array(x), array(y); kw...) && isapprox(weights(x), weights(y); kw...)
 
 ##### Extractors
 
