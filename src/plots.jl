@@ -2,7 +2,7 @@
 PLOTSIZE = 400
 ALPHA = 0.4
 
-pointsize(x, sz=1) = 44 .* sqrt.(sz .* weights(x)) .+ 1
+pointsize(x, sz=1) = 44 .* sqrt.(sz .* weights(x)) # .+ 1
 
 using RecipesBase
 
@@ -13,8 +13,8 @@ using RecipesBase
         out = wPCA(x,2)(x)
     else
 
-        legend --> :false
-        label  --> " "
+        # legend --> :false
+        label  --> ""
         if x.opt.clamp
             extr = [x.opt.lo - 0.05, x.opt.hi + 0.05]
             xlims --> extr
@@ -37,15 +37,15 @@ using RecipesBase
         markersize := pointsize(x, sz)
 
         if size(x,1)==2
-            xaxis --> grsafe(x.opt.aname)*"_1"
-            yaxis --> grsafe(x.opt.aname)*"_2"
+            xaxis --> (x.opt.aname)*"_1"
+            yaxis --> (x.opt.aname)*"_2"
 
             out = array(x)[1,:], array(x)[2,:]
 
         elseif size(x,1)==3
-            xaxis --> grsafe(x.opt.aname)*"_1"
-            yaxis --> grsafe(x.opt.aname)*"_2"
-            zaxis --> grsafe(x.opt.aname)*"_3"
+            xaxis --> (x.opt.aname)*"_1"
+            yaxis --> (x.opt.aname)*"_2"
+            zaxis --> (x.opt.aname)*"_3"
 
             marker_z --> array(x)[3,:]
 
@@ -57,24 +57,6 @@ end
 
 @recipe f(x::Weighted{<:Base.ReshapedArray}; sz=1) = copy(x) # these were otherwise not caught
 @recipe f(x::Weighted{<:Base.ReinterpretArray}; sz=1) = copy(x)
-
-# GR doesn't like unicode, but likes latex style greek
-function grsafe(s::Union{Symbol,String})
-    # Plots.backend_name() != :gr && return string(s)
-    return reduce(*, grsafe(c) for c in string(s))
-end
-
-
-function grsafe(c::Char)
-    c=='θ' && return "\\theta"
-    c=='ϕ' && return "\\phi"
-    c=='σ' && return "\\sigma"
-    c=='π' && return "\\pi"
-    c=='_' && return "\\_"
-    c=='(' && return "\\("
-    c==')' && return "\\)"
-    string(c)
-end
 
 function pcaylim(x::Weighted, ratio=1.5)
     mat = array(x)
@@ -93,20 +75,21 @@ function pcaylim(x::Weighted, ratio=1.5)
 end
 
 ## 1D with shadow
-@recipe function f(x::Weighted{<:Vector}, shadow="yes"; sz=0.8) # sz doesn't get passed to here :(
+@recipe function f(x::Weighted{<:Vector}, shadow="yes"; sz=0.5) # sz doesn't get passed to here :(
     size   --> (1.2*PLOTSIZE, 0.8*PLOTSIZE)
-    legend --> :false
+    # legend --> :false
     if x.opt.clamp && x.opt.hi < Inf
         xlims --> [x.opt.lo - 0.05, x.opt.hi + 0.05]
     end
-    xaxis --> grsafe(x.opt.aname) #"\\theta"
-    yaxis --> grsafe(x.opt.wname)
+    xaxis --> x.opt.aname
+    # yaxis --> x.opt.wname
     ylims  --> [0, 1.4*maximum(weights(x)) ]
     yticks --> [0, round(maximum(weights(x)),digits=2)]
 
     if shadow != "only"
         @series begin # plot the points
             seriestype := :scatter
+            label --> ""
             markersize := pointsize(x, sz)
             markeralpha --> ALPHA
             # markerstrokewidth --> 0
@@ -119,7 +102,7 @@ end
             seriestype := :line
             label := ""
             fill  := 0
-            seriescolor := :black
+            seriescolor --> :black
             seriesalpha := 0.5*ALPHA
 
             shadowxy(array(x), weights(x))
@@ -127,7 +110,7 @@ end
     end
 end
 
-function shadowxy(x::Vector, y::Vector, smooth=(maximum(x)-minimum(x))/100, numpoints=321; fixmax=true)
+function shadowxy(x::Vector, y::Vector, smooth=(max(1, maximum(x)-minimum(x)))/100, numpoints=321; fixmax=true)
     @assert length(x)==length(y)
     xlist = range(minimum(x)-10*smooth, stop=maximum(x)+10*smooth, length=numpoints)
     ylist = zeros(numpoints)

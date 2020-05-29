@@ -39,6 +39,7 @@ const AbsVec = AbstractVector
 const AbsMat = AbstractMatrix
 const AbsArray = AbstractArray
 
+const def_opt = WeightOpt()
 
 ##### Constructors
 
@@ -84,6 +85,9 @@ Weighted() = Weighted(Float64[])
 
 WeightedMatrix(x::AbsMat, rest... ; kw...) = Weighted(x, rest...; kw...)
 WeightedMatrix(x::AbsVec, rest... ; kw...) = Weighted(reshape(x,:,1), rest...; kw...)
+WeightedMatrix(x::AbsVec{T}) where {T} = Weighted(reshape(x,:,1), T[1], def_opt)
+
+Base.vec(x::WeightedMatrix) = Weighted(vec(x.array), x.weights, x.opt)
 
 """
     hcat(x::WeightedMatrix, y, z...)

@@ -76,6 +76,7 @@ wgrid(d::Int, range::AbstractRange) = Weighted(xgrid(d,range), extrema(range)...
 
 """
     xgrid(d, 0:0.1:5)
+
 Gives the matrix whose colums are `d`-vectors, forming a grid of the given range in all dimensions.
 """
 xgrid(d::Int, n::Int) = xgrid(d, 0:n)
@@ -105,6 +106,7 @@ using Distances
 
 """
     pairwise2(x, y=x) = Distances.pairwise(SqEuclidean(), x, y)
+
 Resulting `mat[i,j]` is distance sqared from `x[:,i]` to `y[:,j]`. Implementation varies.
 """
 pairwise2(x::Matrix, y::Matrix) = pairwise(SqEuclidean(), x, y, dims=2)
