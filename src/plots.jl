@@ -1,8 +1,13 @@
+# colorbar_title
 
 PLOTSIZE = 400
 ALPHA = 0.4
 
-pointsize(x, sz=1) = 44 .* sqrt.(sz .* weights(x)) # .+ 1
+# Honest approach: constant total area, divided among points:
+# pointsize(x, sz=1) = 44 .* sqrt.(sz .* weights(x))  
+
+# Increase the total when there are many tiny points, else they disappear:
+pointsize(x, sz=1) = 25 .* sqrt.(sz .* weights(x)) .* (size(x,2)^0.15)
 
 using RecipesBase
 
@@ -33,7 +38,9 @@ using RecipesBase
 
         seriestype := :scatter
         markeralpha --> ALPHA # nickname alpha=0.2 doesn't overwrite this
-        #markerstrokewidth --> 0
+        if size(x,2) > 100 # tiny points are black if they all have edges
+            markerstrokewidth --> 0
+        end
         markersize := pointsize(x, sz)
 
         if size(x,1)==2
@@ -103,7 +110,10 @@ end
             label := ""
             fill  := 0
             seriescolor --> :black
+            # fillcolor --> get(palette(plotattributes[:seriescolor]), 0.1)
             seriesalpha := 0.5*ALPHA
+            markersize --> 0
+            markeralpha --> 0
 
             shadowxy(array(x), weights(x))
         end
