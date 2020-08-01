@@ -10,7 +10,7 @@ Uniformly distributed vectors in `[0,1]^d`, as columns of a `Weighted{Matrix}`
 which knows to `clamp` them to this box. Keyword `weights=true` gives weights ∝ `1 .+ rand(k)` rather than constant.
 Default is now `k=1`, making a one-column matrix.
 
-    wrandn(d, k) = π .* Weighted(randn(d, k))
+    wrandn(d, k) = scale .* Weighted(randn(d, k))
 
 Normally distributed `d`-vectors, of mean zero and std. dev. `scale=1` by default.
 Keyword `max=10` clamps absolute values to be less than this.

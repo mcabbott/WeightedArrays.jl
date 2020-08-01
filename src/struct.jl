@@ -119,15 +119,21 @@ Allows `0.7*Π1 + 0.3*Π2` since `+` means `hcat`.
 Does not affect whether it is normalised.
 
     λ .* Π
+    λ .+ Π
 
-This instead scales `Π.array` instead,
+This instead scales, or shifts, `Π.array`,
 and adjusts box constraints if applicable.
+Arbitrary broadcasting is not supported, just these two!
 """
 Base.:*(λ::Number, x::Weighted) = Weighted(x.array, λ .* x.weights, x.opt)
 Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
 
 Base.broadcasted(::typeof(*), λ::Number, x::Weighted) = _scaleby(x, λ)
 Base.broadcasted(::typeof(*), x::Weighted, λ::Number) = _scaleby(x, λ)
+
+Base.broadcasted(::typeof(+), λ::Number, x::Weighted) = _shiftby(x, λ)
+Base.broadcasted(::typeof(+), x::Weighted, λ::Number) = _shiftby(x, λ)
+Base.broadcasted(::typeof(-), x::Weighted, λ::Number) = _shiftby(x, -λ)
 
 using Setfield
 
@@ -138,6 +144,14 @@ function _scaleby(x, λ)
         o = set(o, @lens(_.hi), λ * o.hi)
     end
     Weighted(λ .* x.array, x.weights, o)
+end
+function _shiftby(x, λ)
+    o = x.opt
+    if x.opt.clamp
+        o = set(o, @lens(_.lo), λ + o.lo)
+        o = set(o, @lens(_.hi), λ + o.hi)
+    end
+    Weighted(λ .+ x.array, x.weights, o)
 end
 
 wname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.wname), string(s))
@@ -220,7 +234,8 @@ function Base.clamp(x::Weighted)
 end
 
 # Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
-Base.clamp(x::Weighted, lo::Real, hi::Real) = clamp!(copy(x), lo, hi)
+Base.clamp(x::Weighted, lo::Real, hi::Real) = 
+    clamp!(Weighted(copy(x.array), copy(x.weights), Base.clamp(x.opt, lo, hi)))
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
     o = set(o, @lens(_.clamp), true)
@@ -229,6 +244,8 @@ function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
     o
 end
 unclamp(o::WeightOpt) = set(o, @lens(_.clamp), false)
+
+unclamp(x::Weighted) = Weighted(x.array, x.weights, unclamp(x.opt))
 
 """
     normalise(x) # with an s, NB!
