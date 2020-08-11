@@ -131,9 +131,9 @@ Base.:*(x::Weighted, λ::Number) = Weighted(x.array, λ .* x.weights, x.opt)
 Base.broadcasted(::typeof(*), λ::Number, x::Weighted) = _scaleby(x, λ)
 Base.broadcasted(::typeof(*), x::Weighted, λ::Number) = _scaleby(x, λ)
 
-Base.broadcasted(::typeof(+), λ::Number, x::Weighted) = _shiftby(x, λ)
-Base.broadcasted(::typeof(+), x::Weighted, λ::Number) = _shiftby(x, λ)
-Base.broadcasted(::typeof(-), x::Weighted, λ::Number) = _shiftby(x, -λ)
+Base.broadcasted(::typeof(+), λ, x::Weighted) = _shiftby(x, λ)
+Base.broadcasted(::typeof(+), x::Weighted, λ) = _shiftby(x, λ)
+Base.broadcasted(::typeof(-), x::Weighted, λ) = _shiftby(x, -λ)
 
 using Setfield
 
@@ -145,7 +145,7 @@ function _scaleby(x, λ)
     end
     Weighted(λ .* x.array, x.weights, o)
 end
-function _shiftby(x, λ)
+function _shiftby(x, λ::Number)
     o = x.opt
     if x.opt.clamp
         o = set(o, @lens(_.lo), λ + o.lo)
@@ -153,6 +153,7 @@ function _shiftby(x, λ)
     end
     Weighted(λ .+ x.array, x.weights, o)
 end
+_shiftby(x, λ::AbstractVector) = Weighted(λ .+ x.array, x.weights, unclamp(x.opt))
 
 wname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.wname), string(s))
 aname(o::WeightOpt, s::Union{String,Symbol}) = set(o, @lens(_.aname), string(s))
