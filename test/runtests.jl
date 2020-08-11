@@ -31,6 +31,12 @@ X = xgrid(2,0:0.1:1)
 X = near(X, S, 0.2)
 @test size(X) == (2,78) # near
 
+Y = wrandnp(Float32, 2,5)
+@test eltype(Y.array) == eltype(weights(Y)) == Float32
+
+Z = wrandn(big, 2,5)
+@test eltype(Z.array) == eltype(weights(Z)) == BigFloat
+
 pca = wPCA(R)
 @test size(pca(sobol(3,10))) == (2,10) # pca can be applied
 

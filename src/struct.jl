@@ -68,7 +68,7 @@ for instance after mutating `x[1,2] *= 3`.
 This constructor with `opt::WeightOpt` doesn't check or clamp anything.
 """
 function Weighted(array::AbsArray, vector::AbsVec = ones(lastlength(array)); norm=true)
-    weights = clamp.(vector,0,Inf)
+    weights = clamp.(vector, 0, typemax(eltype(vector)))
     norm && rmul!(weights, 1/sum(weights))
     Weighted(array, weights, WeightOpt(norm=norm))
 end
@@ -76,7 +76,7 @@ end
 Weighted(array::AbsArray, lo::Real, hi::Real; norm=true) = Weighted(array, ones(lastlength(array)), lo, hi; norm=norm)
 
 function Weighted(array::AbsArray, vector::AbsVec, lo::Real, hi::Real; norm=true)
-    weights = clamp.(vector,0,Inf)
+    weights = clamp.(vector, 0, typemax(eltype(vector)))
     norm && rmul!(weights, 1/sum(weights))
     Weighted(clamp.(array,lo,hi), weights, WeightOpt(norm=norm, clamp=true, lo=lo, hi=hi))
 end
@@ -235,7 +235,7 @@ function Base.clamp(x::Weighted)
 end
 
 # Base.clamp!(x::Weighted, lo::Real, hi::Real) = begin x.opt = clamp(x.opt, lo, hi); clamp!(x) end
-Base.clamp(x::Weighted, lo::Real, hi::Real) = 
+Base.clamp(x::Weighted, lo::Real, hi::Real) =
     clamp!(Weighted(copy(x.array), copy(x.weights), Base.clamp(x.opt, lo, hi)))
 
 function Base.clamp(o::WeightOpt, lo=0.0, hi=1.0)
@@ -258,7 +258,10 @@ the copying (!) form sets this flag first.
 	unnormalise(x)
 Just alters the flag `x.opt.norm`.
 """
-normalise(x::AbsVec) = begin itot = 1/sum(positive,x); itot .* clamp.(x, 0,Inf) end
+function normalise(x::AbsVec{T}) where {T}
+    itot = 1/sum(positive,x)
+    clamp.(x, zero(T), typemax(T)) .* itot
+end
 @doc @doc(normalise)
 normalise!(x::AbsVec) = begin clamp!(x,0,Inf); rmul!(x, 1/sum(x)) end
 

@@ -20,17 +20,17 @@ For example:
 julia> xx = wrandn(7,50); yy = xx[:, 1:10] |> normalise
 julia> plot(xx, sPCA); plot!(yy, rPCA)
 ```
-Now equivalent to using PCA-plot function: `pplot(xx); pplot!(yy)`. 
+Now equivalent to using PCA-plot function: `pplot(xx); pplot!(yy)`.
 """
 function wPCA(x::Union{Matrix, Weighted}, outdim::Int=2) ## from  fit{T<:AbstractFloat}(::Type{PCA}, X::DenseMatrix{T};
     d, n = size(x)
-    mv = preprocess_mean(array(x), nothing)
-    aw = AnalyticWeights(weights(x))
+    mv = preprocess_mean(Float64.(array(x)), nothing)
+    aw = AnalyticWeights(Float64.(weights(x)))
     C = covm(array(x), isempty(mv) ? 0 : mv, aw, 2; corrected=true) ## corrected=true from depwarn?
     M = pcacov(C, mv; maxoutdim=outdim, pratio=0.999)
 end
 
-(pca::PCA)(x::Weighted) = Weighted(transform(pca, array(x)), weights(x), unclamp(addname(x.opt, "-PC")) )
+(pca::PCA)(x::Weighted) = Weighted(transform(pca, Float64.(array(x))), weights(x), unclamp(addname(x.opt, "-PC")) )
 
 @doc @doc(wPCA)
 function sPCA(x::Union{Matrix, Weighted}, outdim::Int=2)

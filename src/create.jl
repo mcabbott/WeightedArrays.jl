@@ -5,10 +5,12 @@ export wrand, wrandn, wrandnp, wsobol, sobol, soboln, sobolnp, wgrid, xgrid, nea
 
 """
     wrand(d, k) = Weighted(rand(d, k))
+    wrand(T, d, k)
 
 Uniformly distributed vectors in `[0,1]^d`, as columns of a `Weighted{Matrix}`
-which knows to `clamp` them to this box. Keyword `weights=true` gives weights ∝ `1 .+ rand(k)` rather than constant.
-Default is now `k=1`, making a one-column matrix.
+which knows to `clamp` them to this box. `T = Float64` by default.
+
+Keyword `weights=true` gives weights ∝ `1 .+ rand(k)` rather than constant.
 
     wrandn(d, k) = scale .* Weighted(randn(d, k))
 
@@ -19,18 +21,30 @@ Keyword `max=10` clamps absolute values to be less than this.
 
 Absolute value of normally distributed...
 """
-wrand(d::Int, k::Int=1; weights=true) = Weighted( rand(d,k), weights ? 1 .+ rand(k) : ones(k) ,0,1)
+wrand(d::Int, k::Int=1; kw...) = wrand(Float64,d,k; kw...)
+wrand(T::Type, d::Int, k::Int=1; weights=true) = Weighted(rand(T,d,k), weights ? 1 .+ rand(T,k) : ones(T,k) ,0,1)
 
 @doc @doc(wrand)
-function wrandn(d::Int, k::Int=1; scale=1, weights=true, max=Inf)
-    out = Weighted( scale .* randn(d,k), weights ? 1 .+ rand(k) : ones(k) )
-    max==Inf ? out : clamp!(out, -max, max)
+wrandn(d::Int, k::Int=1; kw...) = wrandn(Float64,d,k; kw...)
+function wrandn(T::Type, d::Int, k::Int=1; scale=one(T), weights=true, max=typemax(T))
+    arr = clamp.(scale .* randn(T,d,k), -max, max)
+    opt = max==Inf ? WeightOpt() : WeightOpt(clamp=true, lo=-max, hi=max)
+    Weighted(arr, normalise(weights ? 1 .+ rand(T,k) : ones(T,k)), opt)
 end
 
 @doc @doc(wrand)
-function wrandnp(d::Int, k::Int=1; scale=1, weights=true, max=Inf)
-    out = Weighted( abs.(scale .* randn(d,k)), weights ? 1 .+ rand(k) : ones(k), 0,Inf)
-    max==Inf ? out : clamp!(out, 0, max)
+wrandnp(d::Int, k::Int=1; kw...) = wrandnp(Float64,d,k; kw...)
+function wrandnp(T::Type, d::Int, k::Int=1; scale=one(T), weights=true, max=typemax(T))
+    arr = clamp.(abs.(scale .* randn(T,d,k)), 0, max)
+    opt = max==Inf ? WeightOpt() : WeightOpt(clamp=true, lo=0, hi=max)
+    Weighted(arr, normalise(weights ? 1 .+ rand(T,k) : ones(T,k)), opt)
+end
+
+for f in [:wrand, :wrandn, :wrandnp]
+    @eval function $f(::Union{typeof(big), Type{BigFloat}}, d::Int, k::Int=1; kw...)
+        r64 = $f(d,k;kw...)
+        Weighted(big.(r64.array), big.(r64.weights), r64.opt) |> normalise!
+    end
 end
 
 ##### sub-random
@@ -44,7 +58,7 @@ First `k` entries from the `d`-dimensional Sobol sequence, as columns of a `Weig
 """
 function sobol(d::Int, k::Int=1)
     s = Sobol.SobolSeq(d)
-    cols = hcat([Sobol.next!(s) for i=1:k]...)
+    cols = reduce(hcat, [Sobol.next!(s) for i=1:k])
     Weighted(cols, ones(k), 0,1)
 end
 
@@ -58,13 +72,17 @@ as columns of a `Weighted{Matrix}`.
 """
 function soboln(d::Int, k::Int=1; scale=1)
     boxed = sobol(d,k)
-    Weighted( scale .* erfinv.( -1 .+ 2 .*array(boxed)), boxed.weights)
+    Weighted(scale .* erfinv.( -1 .+ 2 .* array(boxed)), boxed.weights)
 end
 
 function sobolnp(d::Int, k::Int=1; scale=π)
     boxed = sobol(d,k)
-    Weighted( scale .* erfinv.(boxed.array), boxed.weights, 0, Inf)
+    Weighted(scale .* erfinv.(boxed.array), boxed.weights, 0, Inf)
 end
+
+sobol(T::Type, d::Int, k::Int=1) = Weighted(map(T, sobol(d,k).array), ones(T,k), 0,1)
+soboln(T::Type, d::Int, k::Int=1) = Weighted(map(T, soboln(d,k).array), ones(T,k))
+sobolnp(T::Type, d::Int, k::Int=1) = Weighted(map(T, sobolnp(d,k).array), ones(T,k))
 
 
 ##### ordered!
