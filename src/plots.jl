@@ -44,15 +44,15 @@ using RecipesBase
         markersize := pointsize(x, sz)
 
         if size(x,1)==2
-            xaxis --> (x.opt.aname)*"_1"
-            yaxis --> (x.opt.aname)*"_2"
+            xguide --> (x.opt.aname)*"_1"
+            yguide --> (x.opt.aname)*"_2"
 
             out = array(x)[1,:], array(x)[2,:]
 
         elseif size(x,1)==3
-            xaxis --> (x.opt.aname)*"_1"
-            yaxis --> (x.opt.aname)*"_2"
-            zaxis --> (x.opt.aname)*"_3"
+            xguide --> (x.opt.aname)*"_1"
+            yguide --> (x.opt.aname)*"_2"
+            zguide --> (x.opt.aname)*"_3"
 
             marker_z --> array(x)[3,:]
 
@@ -88,7 +88,7 @@ end
     if x.opt.clamp && x.opt.hi < Inf
         xlims --> [x.opt.lo - 0.05, x.opt.hi + 0.05]
     end
-    xaxis --> x.opt.aname
+    xguide --> x.opt.aname
     # yaxis --> x.opt.wname
     ylims  --> [0, 1.4*maximum(weights(x)) ]
     yticks --> [0, round(maximum(weights(x)),digits=2)]
