@@ -327,8 +327,8 @@ function Base.show(io::IO, o::WeightOpt) ## compact, re-digestable
 	print(io, "WeightOpt(")
 	o.norm || print(io, "norm=false, ")
 	o.clamp && print(io, "clamp=true, lo=",o.lo,", hi=",o.hi,", ")
-    o.aname !== "θ" && print(io, "aname=",o.aname,", ")
-    o.wname != "p(θ)" && print(io, "wname=",o.wname,", ")
+    o.aname !== "θ" && print(io, "aname=",repr(o.aname),", ")
+    o.wname != "p(θ)" && print(io, "wname=",repr(o.wname),", ")
     o.like && print(io, "like=true")
 	print(io, ")")
 end

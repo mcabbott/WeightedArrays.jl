@@ -57,30 +57,32 @@ end
 
 
 # writecsv(io, x::Weighted; kw...) = writedlm(io, [x.array' x.weights], ','; kw...)
-writecsv(io, x::Weighted; kw...) = writedlm(io, [x.array' |> copy x.weights], ','; kw...) ## copy for Flux bug with Adjoint
+writecsv(io, x::Weighted; kw...) = writedlm(io, hcat(permutedims(array(x)), weights(x)), ','; kw...) ## copy for Flux bug with Adjoint
 
-function readcsv(io, T::Type{Weighted}; kw...)
+function readcsv(file, T::Type{Weighted}; kw...)
 
-    mat = readdlm(io, ','; kw...)
-    array = mat[:, 1:end-1]' |> copy
+    mat = readdlm(file, ','; kw...)
+    array = mat[:, 1:end-1] |> permutedims
     weights = mat[:,end]
 
-    norm = sum(weights)≈1
+    # try to guess norm & clamp from the data:
+    norm = sum(weights) ≈ 1
     if minimum(array)>=0 && maximum(array)<=1
         clamp,lo,hi = true,0,1
     else
         clamp,lo,hi = false,-Inf,Inf
     end
-    if endswith(string(io), ".csv")
-        aname = string(io)[1:end-4] |> Symbol
+    # and use filename for "array-name"
+    if endswith(string(file), ".csv")
+        aname = string(file)[1:end-4]
     else
-        aname = string(io) |> Symbol
+        aname = string(file)
     end
 
     Weighted(array, weights, WeightOpt(norm=norm, clamp=clamp,lo=lo,hi=hi, aname=aname))
 end
 
-# Base.writecsv(io, x::Weighted; kw...) = writecsv(io, (x.array, x.weights, [x.opt.norm, x.opt.clamp, x.opt.lo, x.opt.lo, x.opt.names]); kw...)
+# Base.writecsv(file, x::Weighted; kw...) = writecsv(file, (x.array, x.weights, [x.opt.norm, x.opt.clamp, x.opt.lo, x.opt.lo, x.opt.names]); kw...)
 
 import JSON
 

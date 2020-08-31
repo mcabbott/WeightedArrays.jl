@@ -49,3 +49,23 @@ using SliceMap
 
 @test mapcols(x -> 2 .* x, S).array ≈ 2 .* S.array
 @test MapCols(x -> 2 .* x, S).array ≈ 2 .* S.array
+
+mktempdir() do path
+    w1 = Weighted([1 2; 3 4], [0.5, 1.0], WeightOpt(aname="a", wname="w"))
+
+    f1csv = joinpath(path, "w1.csv")
+    save(w1, f1csv)
+    w1csv = load(f1csv)
+
+    @test w1csv.array == w1.array
+    @test w1csv.weights == weights(w1) # normalised
+    @test w1csv.opt.aname == "w1" # not saved
+
+    f1json = joinpath(path, "w1.json")
+    save(w1, f1json)
+    w1json = load(f1json)
+
+    @test w1json.array == w1.array
+    @test w1json.weights == w1.weights
+    @test w1json.opt.aname == "a"
+end
