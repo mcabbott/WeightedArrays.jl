@@ -36,7 +36,7 @@ end
 wrandnp(d::Int, k::Int=1; kw...) = wrandnp(Float64,d,k; kw...)
 function wrandnp(T::Type, d::Int, k::Int=1; scale=one(T), weights=true, max=typemax(T))
     arr = clamp.(abs.(scale .* randn(T,d,k)), 0, max)
-    opt = max==Inf ? WeightOpt() : WeightOpt(clamp=true, lo=0, hi=max)
+    opt = WeightOpt(clamp=true, lo=0, hi=max)
     Weighted(arr, normalise(weights ? 1 .+ rand(T,k) : ones(T,k)), opt)
 end
 
