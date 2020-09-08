@@ -3,15 +3,17 @@
 PLOTSIZE = 400
 ALPHA = 0.4
 
-# Honest approach: constant total area, divided among points:
-# pointsize(x, sz=1) = 44 .* sqrt.(sz .* weights(x))  
-
-# Increase the total when there are many tiny points, else they disappear:
-pointsize(x, sz=1) = 25 .* sqrt.(sz .* weights(x)) .* (size(x,2)^0.15)
+pointsize(x, sz) = if sz == :auto
+    # By default, increase the total when there are many tiny points, else they disappear:
+        25 .* sqrt.(weights(x)) .* (size(x,2)^0.15)
+    else
+    # But if sz is provided, then work from constant total area, divided among points:
+        44 .* sqrt.(sz .* x.weights)
+    end
 
 using RecipesBase
 
-@recipe function f(x::Weighted{<:Matrix, <:Vector}; sz=1) # exlude both 1D and Tracked
+@recipe function f(x::Weighted{<:Matrix, <:Vector}; sz=:auto, bd=:auto) # exlude both 1D and Tracked
     if size(x,1)==1
         out = Weighted(vec(x.array), x.weights, x.opt) # just to use 1D type signature
     elseif size(x,1)>=4
@@ -38,7 +40,7 @@ using RecipesBase
 
         seriestype := :scatter
         markeralpha --> ALPHA # nickname alpha=0.2 doesn't overwrite this
-        if size(x,2) > 100 # tiny points are black if they all have edges
+        if bd==false || (bd==:auto && size(x,2) > 100) # tiny points are black if they all have edges
             markerstrokewidth --> 0
         end
         markersize := pointsize(x, sz)
