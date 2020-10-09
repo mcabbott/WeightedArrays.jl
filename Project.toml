@@ -24,7 +24,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CatViews = "1"
-Distances = "0.8, 0.9"
+Distances = "0.8, 0.9, 0.10"
 EllipsisNotation = "0.4"
 GroupSlices = "0.0.3"
 JSON = "0.20, 0.21, 1"
